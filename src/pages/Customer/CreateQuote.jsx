@@ -1,0 +1,1740 @@
+import React, { useState, useEffect } from "react";
+import { Table, Form, Button, Card, Modal, Col, Badge, Row } from "react-bootstrap";
+import {
+  FaCheckCircle,
+  FaEdit,
+  FaTrash,
+  FaSave,
+  FaTimesCircle,
+} from "react-icons/fa";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import { toast } from "react-hot-toast";
+import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
+import Select from 'react-select';
+
+
+// Utility function to format date as DD-MM-YYYY
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const CreateQuote = () => {
+  const navigate = useNavigate();
+  const { leadId, queryId } = useParams();
+  const location = useLocation();
+  const selectQuotationId = location.state?.selectQuotationId;
+  const [leadDetails, setLeadDetails] = useState(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [eventStartDate, setEventStartDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
+  const [venueName, setVenueName] = useState('');
+  const [venueAddress, setVenueAddress] = useState('');
+  const [servicesList, setServicesList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [services, setServices] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [presetCategory, setPresetCategory] = useState(null);
+  const [presetServices, setPresetServices] = useState([]);
+  const [presetEventStartDate, setPresetEventStartDate] = useState('');
+  const [presetEventEndDate, setPresetEventEndDate] = useState('');
+  const [presetSlot, setPresetSlot] = useState(null);
+  const [presetVenueName, setPresetVenueName] = useState('');
+  const [presetVenueAddress, setPresetVenueAddress] = useState('');
+  const [packages, setPackages] = useState([]);
+  const [presetData, setPresetData] = useState([]);
+
+  const [discountPer, setDiscountPer] = useState(0);
+  const [discountValue, setDiscountValue] = useState(0);
+  const [gstValue, setGstValue] = useState(0);
+  const [totalAfterDiscount, setTotalAfterDiscount] = useState(0);
+  const [isGstApplied, setIsGstApplied] = useState(false);
+
+  const [marginAfterDiscount, setMarginAfterDiscount] = useState(0);
+  const [marginGstValue, setMarginGstValue] = useState(0);
+  const [totalMarginFinal, setTotalMarginFinal] = useState(0);
+
+
+
+  // Add state for editing
+  const [editingPackageIndex, setEditingPackageIndex] = useState(null);
+
+  // Add state for custom category and slot
+  const [customCategory, setCustomCategory] = useState('');
+  const [customSlot, setCustomSlot] = useState('');
+
+  // Installments state
+  const [installments, setInstallments] = useState([]);
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [editingInstallmentIndex, setEditingInstallmentIndex] = useState(null);
+  const [newInstallmentName, setNewInstallmentName] = useState('');
+  const [newInstallmentPercentage, setNewInstallmentPercentage] = useState('');
+
+  // Add state for save modal
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [quoteTitle, setQuoteTitle] = useState("");
+  const [quoteDescription, setQuoteDescription] = useState("");
+
+  // Calculate total package amount
+  const totalPackageAmount = packages.reduce((sum, pkg) =>
+    sum + pkg.services.reduce((s, srv) =>
+      s + (parseFloat(srv.price) || 0) * (parseInt(srv.qty) || 1), 0), 0);
+
+  // Auto-generate installments when packages are added and installments is empty
+  useEffect(() => {
+    if (packages.length > 0 && installments.length === 0) {
+      const defaultPercents = [50, 30, 20];
+      const defaultInsts = defaultPercents.map((perc, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        name: `Installment ${idx + 1}`,
+        percentage: perc,
+        amount: Math.round((perc / 100) * totalAfterDiscount)
+      }));
+      setInstallments(defaultInsts);
+    }
+  }, [packages, totalAfterDiscount]);
+
+  // Recalculate amounts when grand total changes
+  useEffect(() => {
+    setInstallments(insts => insts.map(inst => ({
+      ...inst,
+      amount: Math.round((inst.percentage / 100) * totalAfterDiscount)
+    })));
+  }, [totalAfterDiscount]);
+
+  // Add or update installment
+  const handleSaveInstallment = () => {
+    const perc = parseFloat(newInstallmentPercentage);
+    if (!newInstallmentName || isNaN(perc) || perc <= 0) {
+      toast.error('Please enter a valid name and percentage.');
+      return;
+    }
+    if (editingInstallmentIndex !== null) {
+      // Update
+      setInstallments(insts => insts.map((inst, idx) => idx === editingInstallmentIndex ? {
+        ...inst,
+        name: newInstallmentName,
+        percentage: perc,
+        amount: Math.round((perc / 100) * totalAfterDiscount)
+      } : inst));
+    } else {
+      // Add
+      setInstallments(insts => ([
+        ...insts,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          name: newInstallmentName,
+          percentage: perc,
+          amount: Math.round((perc / 100) * totalAfterDiscount)
+        }
+      ]));
+    }
+    setShowInstallmentModal(false);
+    setEditingInstallmentIndex(null);
+    setNewInstallmentName('');
+    setNewInstallmentPercentage('');
+  };
+
+  const handleEditInstallment = (index) => {
+    setEditingInstallmentIndex(index);
+    setNewInstallmentName(installments[index].name);
+    setNewInstallmentPercentage(installments[index].percentage.toString());
+    setShowInstallmentModal(true);
+  };
+
+  const handleDeleteInstallment = (index) => {
+    setInstallments(insts => insts.filter((_, idx) => idx !== index));
+  };
+
+
+  useEffect(() => {
+    const total = packages.reduce(
+      (sum, pkg) =>
+        sum +
+        pkg.services.reduce(
+          (s, srv) =>
+            s + (parseFloat(srv.price) || 0) * (parseInt(srv.qty) || 1),
+          0
+        ),
+      0
+    );
+
+    const margin = packages.reduce(
+      (sum, pkg) =>
+        sum +
+        pkg.services.reduce(
+          (s, srv) =>
+            s + (parseFloat(srv.marginPrice) || 0) * (parseInt(srv.qty) || 1),
+          0
+        ),
+      0
+    );
+
+    const discount = (total * discountPer) / 100;
+    const marginDiscount = (margin * discountPer) / 100;
+
+    const totalAfterDisc = total - discount;
+    const marginAfterDisc = margin - marginDiscount;
+
+    const gst = isGstApplied ? totalAfterDisc * 0.18 : 0;
+    const marginGst = isGstApplied ? marginAfterDisc * 0.18 : 0;
+
+    setDiscountValue(Math.round(discount));
+    setGstValue(Math.round(gst));
+    setTotalAfterDiscount(Math.round(totalAfterDisc + gst));
+
+    setMarginAfterDiscount(Math.round(marginAfterDisc));
+    setMarginGstValue(Math.round(marginGst));
+    setTotalMarginFinal(Math.round(marginAfterDisc + marginGst));
+  }, [packages, discountPer, isGstApplied]);
+
+
+
+  const handleGstToggle = () => setIsGstApplied(!isGstApplied);
+
+
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/lead/lead-query-details/${leadId}/${queryId}`
+        );
+        setLeadDetails(res.data.lead || null);
+      } catch (err) {
+        toast.error("Failed to fetch lead/query details");
+        setLeadDetails(null);
+        console.error(err);
+      }
+    };
+    const fetchCategories = async () => {
+      try {
+        const resCategories = await axios.get('http://localhost:5000/api/category/all');
+        setCategoriesList(resCategories.data.data || []);
+      } catch {
+        toast.error('Failed to fetch categories');
+      }
+    };
+    const fetchServices = async () => {
+      try {
+        const resServices = await axios.get('http://localhost:5000/api/service/all');
+        const data = (resServices.data.data || []).map((service, idx) => ({
+          ...service,
+          id: service._id,
+          checked: false,
+          qty: 1
+        }));
+        setServicesList(data);
+        setServices(data);
+      } catch {
+        toast.error('Failed to fetch services');
+      }
+    };
+    fetchDetails();
+    fetchCategories();
+    fetchServices();
+  }, [leadId, queryId]);
+
+  useEffect(() => {
+    const fetchPresetQuotations = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/preset-quotation");
+        setPresetData(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch preset quotations", err);
+        toast.error("Error loading preset packages");
+      }
+    };
+
+    fetchPresetQuotations();
+  }, []);
+
+  const [savedQuotations, setSavedQuotations] = useState([]);
+  const [currentQuotationId, setCurrentQuotationId] = useState(null);
+  const [noQuotationsFound, setNoQuotationsFound] = useState(false);
+
+
+  async function fetchQuotations() {
+    if (!queryId) return;
+    try {
+      setNoQuotationsFound(false);
+      const res = await axios.get(`http://localhost:5000/api/quotations/by-query/${queryId}`);
+      if (res.data.success === false && res.data.message && res.data.message.toLowerCase().includes('no quotations found')) {
+        setSavedQuotations([]);
+        setNoQuotationsFound(true);
+        setCurrentQuotationId(null);
+        return;
+      }
+   
+      setSavedQuotations(res.data.quotations);
+      if (selectQuotationId && res.data.quotations.some(q => q._id === selectQuotationId)) {
+        setCurrentQuotationId(selectQuotationId);
+        // Auto-load the quotation data into the form for editing
+        const selectedQuotation = res.data.quotations.find(q => q._id === selectQuotationId);
+        if (selectedQuotation) {
+          setPackages(
+            (selectedQuotation.packages || []).map(pkg => ({
+              ...pkg,
+              category: pkg.categoryName || pkg.category,
+              type: pkg.packageType ? pkg.packageType.toLowerCase() : (pkg.type || 'custom'),
+              id: pkg._id || pkg.id || uuidv4(),
+            }))
+          );
+          // Ensure each installment has an 'amount' field set to paymentAmount
+          setInstallments((selectedQuotation.installments || []).map((inst, idx) => ({
+            ...inst,
+            name: inst.name || `Installment ${inst.installmentNumber || idx + 1}`,
+            percentage: inst.paymentPercentage !== undefined ? inst.paymentPercentage : 0,
+            amount: inst.paymentAmount !== undefined ? inst.paymentAmount : 0,
+          })));
+          setQuoteTitle(selectedQuotation.name || '');
+          setQuoteDescription(selectedQuotation.description || '');
+          setDiscountPer(selectedQuotation.discountPercent ?? 0);
+          setIsGstApplied(!!selectedQuotation.gstApplied);
+          setGstValue(selectedQuotation.gstValue ?? 0);
+          setDiscountValue(selectedQuotation.discountValue ?? 0);
+          setTotalAfterDiscount(selectedQuotation.totalAfterDiscount ?? 0);
+          setMarginAfterDiscount(selectedQuotation.marginAfterDiscount ?? 0);
+          setMarginGstValue(selectedQuotation.marginGstValue ?? 0);
+          setTotalMarginFinal(selectedQuotation.totalMarginFinal ?? 0);
+        }
+      } else {
+        setCurrentQuotationId(null); // Do not select any quotation by default
+      }
+    } catch (err) {
+      setSavedQuotations([]);
+      setNoQuotationsFound(true);
+      setCurrentQuotationId(null);
+    }
+  }
+  // Fetch quotations for this queryId
+  useEffect(() => {
+    fetchQuotations();
+  }, [queryId]);
+
+  // Placeholder handlers for actions
+  const handleLoadQuotation = (quotationId) => {
+    if (currentQuotationId === quotationId) {
+      setCurrentQuotationId(null);
+      setPackages([]);
+      setInstallments([]);
+      setQuoteTitle("");
+      setQuoteDescription("");
+      setDiscountPer(0);
+      setIsGstApplied(false);
+      setGstValue(0);
+      setDiscountValue(0);
+      setTotalAfterDiscount(0);
+      setMarginAfterDiscount(0);
+      setMarginGstValue(0);
+      setTotalMarginFinal(0);
+      toast.info('No quotation selected. You can now create a new quotation.');
+      return;
+    }
+    const quotation = savedQuotations.find((q) => q._id === quotationId);
+    if (quotation) {
+      setPackages(
+        (quotation.packages || []).map(pkg => ({
+          ...pkg,
+          category: pkg.categoryName || pkg.category,
+          type: pkg.packageType ? pkg.packageType.toLowerCase() : (pkg.type || 'custom'),
+          id: pkg._id || pkg.id || uuidv4(),
+        }))
+      );
+      // Ensure each installment has an 'amount' field set to paymentAmount
+      setInstallments((quotation.installments || []).map((inst, idx) => ({
+        ...inst,
+        name: inst.name || `Installment ${inst.installmentNumber || idx + 1}`,
+        percentage: inst.paymentPercentage !== undefined ? inst.paymentPercentage : 0,
+        amount: inst.paymentAmount !== undefined ? inst.paymentAmount : 0,
+      })));
+      setCurrentQuotationId(quotation._id);
+      setQuoteTitle(quotation.quoteTitle || '');
+      setQuoteDescription(quotation.quoteDescription || '');
+      setDiscountPer(quotation.discountPercent ?? 0);
+      setIsGstApplied(!!quotation.gstApplied);
+      setGstValue(quotation.gstValue ?? 0);
+      setDiscountValue(quotation.discountValue ?? 0);
+      setTotalAfterDiscount(quotation.totalAfterDiscount ?? 0);
+      setMarginAfterDiscount(quotation.marginAfterDiscount ?? 0);
+      setMarginGstValue(quotation.marginGstValue ?? 0);
+      setTotalMarginFinal(quotation.totalMarginFinal ?? 0);
+      toast.success(`"${quotation.quoteTitle}" selected`);
+    }
+  };
+  const handleEditQuotation = (id) => {
+    toast("Edit Quotation " + id);
+  };
+  const handleFinalizeQuotation = async (id) => {
+    try {
+      const res = await axios.patch(`http://localhost:5000/api/quotations/${id}/finalize`, { finalized: true });
+      toast.success('Quotation finalized!');
+      await fetchQuotations();
+      handleLoadQuotation(id); // Select the finalized quotation
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleUnfinalizeQuotation = async (id) => {
+    try {
+      const res = await axios.patch(`http://localhost:5000/api/quotations/${id}/finalize`, { finalized: false });
+      toast.success('Quotation unfinalized!');
+      await fetchQuotations();
+      // If the current selected quotation was unfinalized, clear selection
+      if (currentQuotationId === id) {
+        setCurrentQuotationId(null);
+        setPackages([]);
+        setInstallments([]);
+        setQuoteTitle("");
+        setQuoteDescription("");
+      }
+    } catch (err) {
+
+      console.error(err);
+    }
+  };
+  const handleDeleteQuotation = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this quotation?")) return;
+    try {
+      const res = await axios.delete(`http://localhost:5000/api/quotations/${id}`);
+      if (res.data.success) {
+        toast.success("Quotation deleted successfully");
+        await fetchQuotations();
+      } else {
+        toast.error(res.data.message || "Failed to delete quotation");
+      }
+    } catch (err) {
+      toast.error("Failed to delete quotation");
+    }
+  };
+
+  console.log("savedQuotations", savedQuotations)
+
+  // Custom Modal Handlers
+  const openCustomModal = () => {
+    setShowCustomModal(true);
+    setSelectAll(false);
+    setServices(servicesList.map(s => ({ ...s, checked: false, qty: 1 })));
+    setSelectedCategory(null);
+    setSelectedSlot(null);
+    setEventStartDate('');
+    setEventEndDate('');
+    setVenueName('');
+    setVenueAddress('');
+    setCustomCategory('');
+    setCustomSlot('');
+  };
+  const closeCustomModal = () => setShowCustomModal(false);
+  const handleSelectAll = () => {
+    setSelectAll(!selectAll);
+    setServices(services.map(s => ({ ...s, checked: !selectAll })));
+  };
+  const handleServiceCheck = (id) => {
+    setServices(services.map(s => s.id === id ? { ...s, checked: !s.checked } : s));
+  };
+  const handleServicePrice = (id, value) => {
+    setServices(services.map(s => s.id === id ? { ...s, price: value } : s));
+  };
+  const handleServiceMarginPrice = (id, value) => {
+    setServices(services.map(s => s.id === id ? { ...s, marginPrice: value } : s));
+  };
+  const handleServiceQty = (id, value) => {
+    setServices(services.map(s => s.id === id ? { ...s, qty: value } : s));
+  };
+  const handleCreateCustomPackage = () => {
+    const selectedServices = services.filter(s => s.checked);
+    if (!selectedCategory || selectedServices.length === 0) {
+      toast.error('Please select a category and at least one service.');
+      return;
+    }
+    setPackages([
+      ...packages,
+      {
+        type: 'custom',
+        category: selectedCategory.label,
+        categoryId: selectedCategory.value,
+        slot: selectedSlot?.value || '',
+        eventStartDate,
+        eventEndDate,
+        venueName,
+        venueAddress,
+        services: selectedServices,
+      }
+    ]);
+    closeCustomModal();
+  };
+
+  // Preset Modal Handlers
+  const openPresetModal = () => {
+    setShowPresetModal(true);
+    setPresetCategory(null);
+    setPresetServices([]);
+    setPresetEventStartDate('');
+    setPresetEventEndDate('');
+    setPresetSlot(null);
+    setPresetVenueName('');
+    setPresetVenueAddress('');
+    const fetchPresetQuotations = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/preset-quotation");
+        setPresetData(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch preset quotations", err);
+        toast.error("Error loading preset packages");
+      }
+    };
+    fetchPresetQuotations();
+  };
+  const closePresetModal = () => setShowPresetModal(false);
+  const presetCategoryOptions = presetData.map((p) => {
+    const serviceNames = p.services.map(s => s.serviceName).join(', ');
+    return {
+      value: p._id,
+      label: `${p.category} - ${serviceNames}`,
+    };
+  });
+
+  const handlePresetCategoryChange = (option) => {
+    setPresetCategory(option);
+    const found = presetData.find(p => p._id === option.value);
+    if (found) {
+      const editableServices = found.services.map(s => ({
+        ...s,
+        checked: true // all services checked by default for preset
+      }));
+      setPresetServices(editableServices);
+    } else {
+      setPresetServices([]);
+    }
+  };
+
+
+  const handlePresetServicePrice = (id, value) => {
+    setPresetServices(presetServices.map(s => s.id === id ? { ...s, price: value } : s));
+  };
+
+  const handlePresetServiceQty = (id, value) => {
+    setPresetServices(presetServices.map(s => s.id === id ? { ...s, qty: value } : s));
+  };
+  const handleCreatePresetPackage = () => {
+    const selectedServices = presetServices.filter(s => s.checked);
+    if (!presetCategory || selectedServices.length === 0) {
+      toast.error('Please select a category and at least one service.');
+      return;
+    }
+    setPackages([
+      ...packages,
+      {
+        type: 'preset',
+        category: presetCategory.label,
+        categoryId: presetCategory.value,
+        slot: presetSlot?.value || '',
+        eventStartDate: presetEventStartDate,
+        eventEndDate: presetEventEndDate,
+        venueName: presetVenueName,
+        venueAddress: presetVenueAddress,
+        services: selectedServices,
+      }
+    ]);
+    closePresetModal();
+  };
+
+  // Prepare react-select options
+  const categoryOptions = [
+    ...categoriesList.map(cat => ({ value: cat._id, label: cat.name })),
+    { value: 'others', label: 'Others' }
+  ];
+  const slotOptions = [
+    { value: 'Morning (8AM - 1PM)', label: 'Morning (8AM - 1PM)' },
+    { value: 'Afternoon (12PM - 5PM)', label: 'Afternoon (12PM - 5PM)' },
+    { value: 'Evening (5PM - 9PM)', label: 'Evening (5PM - 9PM)' },
+    { value: 'Midnight (9PM - 12AM)', label: 'Midnight (9PM - 12AM)' },
+    { value: 'others', label: 'Others' }
+  ];
+
+  // Edit handler
+  const handleEditPackage = (pkg, index) => {
+    setEditingPackageIndex(index);
+    if (pkg.type === 'custom') {
+      setShowCustomModal(true);
+      setSelectedCategory({ label: pkg.category, value: pkg.categoryId });
+      setSelectedSlot(pkg.slot ? { value: pkg.slot, label: pkg.slot } : null);
+      setEventStartDate(pkg.eventStartDate || '');
+      setEventEndDate(pkg.eventEndDate || '');
+      setVenueName(pkg.venueName || '');
+      setVenueAddress(pkg.venueAddress || '');
+      // Robustly match services by id, _id, or serviceId
+      setServices(servicesList.map(s => {
+        const found = (pkg.services || []).find(ps =>
+          (ps.id && (ps.id === s.id || ps.id === s._id)) ||
+          (ps._id && (ps._id === s.id || ps._id === s._id)) ||
+          (ps.serviceId && (ps.serviceId === s.id || ps.serviceId === s._id))
+        );
+        return found
+          ? { ...s, checked: true, qty: found.qty, price: found.price, marginPrice: found.marginPrice }
+          : { ...s, checked: false, qty: 1 };
+      }));
+      setCustomCategory(pkg.categoryId === 'custom' ? '' : pkg.category);
+      setCustomSlot(pkg.slot === 'custom' ? '' : pkg.slot);
+    } else if (pkg.type === 'preset') {
+      setShowPresetModal(true);
+      setPresetCategory({ label: pkg.category, value: pkg.categoryId });
+      setPresetSlot(pkg.slot ? { value: pkg.slot, label: pkg.slot } : null);
+      setPresetEventStartDate(pkg.eventStartDate || '');
+      setPresetEventEndDate(pkg.eventEndDate || '');
+      setPresetVenueName(pkg.venueName || '');
+      setPresetVenueAddress(pkg.venueAddress || '');
+      // Set preset services, preserving price, qty, marginPrice, etc.
+      setPresetServices(pkg.services.map(s => ({ ...s, checked: true })));
+    }
+  };
+
+  // In custom modal, on save/update
+  const handleCreateOrUpdateCustomPackage = () => {
+    const selectedServices = services.filter(s => s.checked);
+    if (!selectedCategory || selectedServices.length === 0) {
+      toast.error('Please select a category and at least one service.');
+      return;
+    }
+    const categoryLabel = selectedCategory.value === 'others' ? customCategory : selectedCategory.label;
+    const categoryId = selectedCategory.value === 'others' ? 'custom' : selectedCategory.value;
+    const slotValue = selectedSlot?.value === 'others' ? customSlot : selectedSlot?.value || '';
+    const newPackage = {
+      type: 'custom',
+      category: categoryLabel,
+      categoryId: categoryId,
+      slot: slotValue,
+      eventStartDate,
+      eventEndDate,
+      venueName,
+      venueAddress,
+      services: selectedServices,
+    };
+    if (editingPackageIndex !== null) {
+      // Update existing
+      setPackages(packages.map((pkg, i) => i === editingPackageIndex ? newPackage : pkg));
+    } else {
+      // Add new
+      setPackages([...packages, newPackage]);
+    }
+    setEditingPackageIndex(null);
+    closeCustomModal();
+  };
+
+  // In preset modal, on save/update
+  const handleCreateOrUpdatePresetPackage = () => {
+    if (!presetCategory || presetServices.length === 0) {
+      toast.error('Please select a category and at least one service.');
+      return;
+    }
+    const newPackage = {
+      type: 'preset',
+      category: presetCategory.label,
+      categoryId: presetCategory.value,
+      slot: presetSlot?.value || '',
+      eventStartDate: presetEventStartDate,
+      eventEndDate: presetEventEndDate,
+      venueName: presetVenueName,
+      venueAddress: presetVenueAddress,
+      services: presetServices,
+    };
+    if (editingPackageIndex !== null) {
+      setPackages(packages.map((pkg, i) => i === editingPackageIndex ? newPackage : pkg));
+    } else {
+      setPackages([...packages, newPackage]);
+    }
+    setEditingPackageIndex(null);
+    closePresetModal();
+  };
+
+  // In the Installment Modal, calculate availablePercentage
+  const availablePercentage = editingInstallmentIndex !== null
+    ? 100 - installments.reduce(
+      (sum, inst, idx) => idx !== editingInstallmentIndex ? sum + inst.percentage : sum,
+      0
+    )
+    : 100 - installments.reduce((sum, inst) => sum + inst.percentage, 0);
+
+  // Add or update installment
+  const handleAddInstallment = () => {
+    const percentage = parseFloat(newInstallmentPercentage);
+    if (!newInstallmentName || isNaN(percentage) || percentage <= 0) {
+      toast.error('Please enter a valid name and percentage.');
+      return;
+    }
+    if (percentage > availablePercentage) {
+      toast.error(`You can only allocate up to ${availablePercentage}% for this installment.`);
+      return;
+    }
+    if (editingInstallmentIndex !== null) {
+      // Update
+      setInstallments(insts => insts.map((inst, idx) => idx === editingInstallmentIndex ? {
+        ...inst,
+        name: newInstallmentName,
+        percentage: percentage,
+        amount: Math.round((percentage / 100) * totalAfterDiscount)
+      } : inst));
+    } else {
+      // Add
+      setInstallments(insts => ([
+        ...insts,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          name: newInstallmentName,
+          percentage: percentage,
+          amount: Math.round((percentage / 100) * totalAfterDiscount)
+        }
+      ]));
+    }
+    setShowInstallmentModal(false);
+    setEditingInstallmentIndex(null);
+    setNewInstallmentName('');
+    setNewInstallmentPercentage('');
+  };
+
+  // Update handleSaveQuotation to use modal values
+  const handleSaveQuotation = async () => {
+    if (!quoteTitle.trim()) {
+      toast.error("Please enter a quotation title");
+      return;
+    }
+    try {
+      const res = await axios.post(`http://localhost:5000/api/quotations/create`, {
+        leadId: leadId,
+        queryId: queryId,
+        quoteTitle,
+        quoteDescription,
+        packages: packages.map(pkg => ({
+          categoryName: pkg.category,
+          packageType: pkg.type === 'preset' ? 'Preset' : 'Custom',
+          eventStartDate: pkg.eventStartDate,
+          eventEndDate: pkg.eventEndDate,
+          slot: pkg.slot,
+          venueName: pkg.venueName,
+          venueAddress: pkg.venueAddress,
+          services: (pkg.services || []).map(s => ({
+            serviceId: s.id || s.serviceId,
+            serviceName: s.serviceName || s.name,
+            price: Number(s.price),
+            marginPrice: Number(s.marginPrice),
+            qty: Number(s.qty),
+          })),
+        })),
+        installments: installments.map((inst, idx) => ({
+          installmentNumber: idx + 1,
+          dueDate: inst.dueDate || "",
+          paymentMode: inst.paymentMode || "",
+          paymentAmount: inst.amount,
+          paymentPercentage: inst.percentage,
+        })),
+        totalAmount: totalAfterDiscount,
+        discountPercent: discountPer,
+        discountValue,
+        gstApplied: isGstApplied,
+        gstValue,
+        totalAfterDiscount,
+        marginAmount: totalMarginFinal,
+        marginAfterDiscount,
+        marginGstValue,
+        totalMarginFinal,
+        finalized: false
+      });
+      toast.success('Quotation saved successfully!');
+      setShowSaveModal(false);
+      setQuoteTitle("");
+      setQuoteDescription("");
+
+      await fetchQuotations();
+
+      // Reset all state after save
+      setPackages([]);
+      setInstallments([]);
+      setCurrentQuotationId(null);
+      setDiscountPer(0);
+      setIsGstApplied(false);
+      setGstValue(0);
+      setDiscountValue(0);
+      setTotalAfterDiscount(0);
+      setMarginAfterDiscount(0);
+      setMarginGstValue(0);
+      setTotalMarginFinal(0);
+
+    } catch (err) {
+      toast.error('Failed to save quotation');
+      console.error(err);
+    }
+  };
+
+  // Placeholder for handleUpdateQuotation
+  const handleUpdateQuotation = async () => {
+    if (!quoteTitle.trim()) {
+      toast.error("Please enter a quotation title");
+      return;
+    }
+    try {
+      const res = await axios.put(`http://localhost:5000/api/quotations/${currentQuotationId}`, {
+        leadId: leadId,
+        queryId: queryId,
+        quoteTitle,
+        quoteDescription,
+        packages: packages.map(pkg => ({
+          categoryName: pkg.category,
+          packageType: pkg.type === 'preset' ? 'Preset' : 'Custom',
+          eventStartDate: pkg.eventStartDate,
+          eventEndDate: pkg.eventEndDate,
+          slot: pkg.slot,
+          venueName: pkg.venueName,
+          venueAddress: pkg.venueAddress,
+          services: (pkg.services || []).map(s => ({
+            serviceId: s.id || s.serviceId,
+            serviceName: s.serviceName || s.name,
+            price: Number(s.price),
+            marginPrice: Number(s.marginPrice),
+            qty: Number(s.qty),
+          })),
+        })),
+        installments: installments.map((inst, idx) => ({
+          installmentNumber: idx + 1,
+          dueDate: inst.dueDate || "",
+          paymentMode: inst.paymentMode || "",
+          paymentAmount: inst.amount,
+          paymentPercentage: inst.percentage,
+        })),
+        totalAmount: totalAfterDiscount,
+        discountPercent: discountPer,
+        discountValue,
+        gstApplied: isGstApplied,
+        gstValue,
+        totalAfterDiscount,
+        marginAmount: totalMarginFinal,
+        marginAfterDiscount,
+        marginGstValue,
+        totalMarginFinal,
+        finalized: false
+      });
+      toast.success('Quotation updated successfully!');
+      setShowSaveModal(false);
+      setQuoteTitle("");
+      setQuoteDescription("");
+
+      await fetchQuotations();
+      handleLoadQuotation(currentQuotationId); // Ensure UI reflects updated values
+
+      // Reset all state after update
+      setPackages([]);
+      setInstallments([]);
+      setCurrentQuotationId(null);
+      setDiscountPer(0);
+      setIsGstApplied(false);
+      setGstValue(0);
+      setDiscountValue(0);
+      setTotalAfterDiscount(0);
+      setMarginAfterDiscount(0);
+      setMarginGstValue(0);
+      setTotalMarginFinal(0);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // When category changes in custom modal, set event dates if category matches query event
+  const handleCategoryChange = (option) => {
+    setSelectedCategory(option);
+    if (option.value !== 'others') setCustomCategory('');
+    // If leadDetails and eventDetails exist, try to find matching event
+    if (leadDetails && leadDetails.queryDetails && Array.isArray(leadDetails.queryDetails.eventDetails)) {
+      const match = leadDetails.queryDetails.eventDetails.find(ev => ev.category === option.label);
+      if (match) {
+        setEventStartDate(match.eventStartDate ? match.eventStartDate.split('T')[0] : '');
+        setEventEndDate(match.eventEndDate ? match.eventEndDate.split('T')[0] : '');
+      } else {
+        setEventStartDate('');
+        setEventEndDate('');
+      }
+    }
+  };
+
+  return (
+    <div className="container mt-4 mb-5" style={{ fontFamily: "Poppins, sans-serif", fontSize: "14px" }}>
+
+      <div className="container my-4">
+        {/* Lead Details Section */}
+        <Card className="p-3 mb-3 border-0 shadow-sm" style={{ background: '#f8fafc', borderRadius: '12px' }}>
+          <div className="d-flex justify-content-between align-items-center pb-2 border-bottom mb-3">
+            <p className="mb-0" style={{ letterSpacing: '1px', fontWeight: 600 }}>Customer Details</p>
+            <div className="d-flex align-items-center gap-2">
+              {leadDetails?.queryDetails?.status && (
+                <span className={`badge bg-${leadDetails.queryDetails.status === 'Call Later' ? 'warning' : 'success'} text-dark`} style={{ fontSize: '13px' }}>
+                  {leadDetails.queryDetails.status}
+                </span>
+              )}
+              {leadDetails?.leadId && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="ms-2 d-flex align-items-center"
+                  style={{ border: 'none', background: 'transparent', boxShadow: 'none' }}
+                  title="Edit Lead"
+                  onClick={() => navigate(`/customer/edit-details/${leadId}/${queryId}`)}
+                >
+                  <FaEdit style={{ fontSize: '18px' }} />
+                </Button>
+              )}
+            </div>
+          </div>
+          {leadDetails ? (
+            <div>
+              <Row className="mb-2">
+                <Col md={6} className="mb-2">
+                  <div><strong>Lead ID:</strong> <span className="text-primary">{leadDetails.leadId || leadDetails._id || 'N/A'}</span></div>
+                </Col>
+                <Col md={6} className="mb-2">
+                  <div><strong>Reference:</strong> <span>{leadDetails.referenceForm || 'N/A'}</span></div>
+                </Col>
+              </Row>
+              <Row className="mb-2">
+                <Col md={6} className="mb-2">
+                  <div><strong>Query ID:</strong> <span>{leadDetails.queryDetails?.queryId || 'N/A'}</span></div>
+                </Col>
+              </Row>
+              <div className="mb-3">
+                <p className="fw-semibold mb-2" style={{ letterSpacing: '0.5px' }}>Persons</p>
+                <Row>
+                  {leadDetails.persons && leadDetails.persons.length > 0 ? leadDetails.persons.map(person => (
+                    <Col md={6} key={person._id} className="mb-2">
+                      <div className="p-2 border rounded bg-white d-flex align-items-center gap-2">
+                        <span className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: 32, height: 32, fontWeight: 600, fontSize: 16 }}>{person.name?.[0] || '?'}</span>
+                        <div>
+                          <div className="fw-semibold">{person.name}</div>
+                          <div style={{ fontSize: '13px' }}><span className="text-muted">{person.phoneNo}</span> | <span className="text-muted">{person.email}</span></div>
+                          <div style={{ fontSize: '13px' }}><span className="badge bg-light text-dark border">{person.profession}</span></div>
+                        </div>
+                      </div>
+                    </Col>
+                  )) : <Col><span className="text-muted">No persons found</span></Col>}
+                </Row>
+              </div>
+              <div className="mb-2">
+                <p className="fw-semibold mb-2" style={{ letterSpacing: '0.5px' }}>Event Details</p>
+                {leadDetails.queryDetails?.eventDetails && leadDetails.queryDetails.eventDetails.length > 0 ? (
+                  <Table bordered size="sm" className="mb-0 bg-white">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Category</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leadDetails.queryDetails.eventDetails.map(event => (
+                        <tr key={event._id}>
+                          <td>{event.category}</td>
+                          <td>{formatDate(event.eventStartDate)}</td>
+                          <td>{formatDate(event.eventEndDate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                ) : <span className="text-muted">No event details found</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="row">
+              <div className="col-12">
+                <p className="text-danger mb-0">
+                  Lead details not found. Please check the lead and query IDs.
+                </p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+
+        {/* Saved Quotations Section */}
+        <Card className="p-3 mb-3 border-0 shadow-sm" style={{ background: "#F4F4F4" }}>
+          <div className="d-flex justify-content-between align-items-center pb-3">
+            <h4 style={{ fontSize: "18px", marginBottom: "0" }}>Saved Quotations</h4>
+          </div>
+          {noQuotationsFound ? (
+            <div className="alert alert-info mb-0">
+              No saved quotations found.
+            </div>
+          ) : savedQuotations.length > 0 ? (
+            <>
+              <div className="alert alert-info mb-3">
+                <small>
+                  <strong>Note:</strong> Only one quotation can be marked as
+                  "Finalized" at a time. To change the final quotation, click{' '}
+                  <FaTimesCircle className="text-warning" /> to unfinalize the
+                  current one, then click{' '}
+                  <FaCheckCircle className="text-success" /> to finalize a
+                  different quotation.
+                </small>
+              </div>
+              <Table bordered hover responsive className="mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th style={{ width: "25%" }}>Quotation Name</th>
+                    <th style={{ width: "15%" }}>Date</th>
+                    <th style={{ width: "15%" }}>Total Amount</th>
+                    <th style={{ width: "15%" }}>Packages</th>
+                    <th style={{ width: "10%" }}>Status</th>
+                    <th style={{ width: "20%" }} className="text-center">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedQuotations.map((quotation) => (
+                    <tr
+                      key={quotation._id}
+                      className={
+                        `${quotation.finalized ? " fw-bold" : ""}
+                        ${quotation._id === currentQuotationId ? "table-primary" : ""}`
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLoadQuotation(quotation._id);
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>
+                        {quotation.quoteTitle}
+                        {quotation.quoteDescription && (
+                          <div>
+                            <small className="text-muted">
+                              {quotation.quoteDescription}
+                            </small>
+                          </div>
+                        )}
+                        {quotation._id === currentQuotationId && (
+                          <Badge bg="info" className="mt-1 fw-medium">
+                            Selected
+                          </Badge>
+                        )}
+                      </td>
+                      <td>{formatDate(quotation.createdAt)}</td>
+                      <td>{quotation.totalAmount !== undefined && quotation.totalAmount !== null ? `₹${quotation.totalAmount.toLocaleString()}` : "-"}</td>
+                      <td>{quotation.packages?.length ?? 0}</td>
+                      <td>
+                        {quotation.finalized ? (
+                          <Badge bg="success">Finalized</Badge>
+                        ) : (
+                          <Badge bg="secondary">Draft</Badge>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        {quotation.finalized ? (
+                          <Button
+                            variant="link"
+                            className="text-warning p-0 mx-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnfinalizeQuotation(quotation._id);
+                            }}
+                            title="Unfinalize Quotation"
+                          >
+                            <FaTimesCircle />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="link"
+                            className="text-success p-0 mx-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFinalizeQuotation(quotation._id);
+                            }}
+                            title="Finalize Quotation"
+                          >
+                            <FaCheckCircle />
+                          </Button>
+                        )}
+                        <Button
+                          variant="link"
+                          className="text-danger p-0 mx-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteQuotation(quotation._id);
+                          }}
+                          title="Delete Quotation"
+                        >
+                          <FaTrash />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </>
+          ) : null}
+        </Card>
+
+
+        {/* Custom Package Modal */}
+        <Modal show={showCustomModal} onHide={closeCustomModal} centered size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>Create New Package</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Select Category</Form.Label>
+                    <Select
+                      options={categoryOptions}
+                      value={selectedCategory}
+                      onChange={handleCategoryChange}
+                      placeholder="Select Category"
+                    />
+                    {selectedCategory && selectedCategory.value === 'others' && (
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter custom category"
+                        value={customCategory}
+                        onChange={e => setCustomCategory(e.target.value)}
+                        className="mt-2"
+                      />
+                    )}
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Choose Slot</Form.Label>
+                    <Select
+                      options={slotOptions}
+                      value={selectedSlot}
+                      onChange={option => {
+                        setSelectedSlot(option);
+                        if (option.value !== 'others') setCustomSlot('');
+                      }}
+                      placeholder="Select Slot"
+                    />
+                    {selectedSlot && selectedSlot.value === 'others' && (
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter custom slot"
+                        value={customSlot}
+                        onChange={e => setCustomSlot(e.target.value)}
+                        className="mt-2"
+                      />
+                    )}
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Event Start Date</Form.Label>
+                    <Form.Control type="date" value={eventStartDate} onChange={e => setEventStartDate(e.target.value)} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Event End Date</Form.Label>
+                    <Form.Control type="date" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Venue Name</Form.Label>
+                    <Form.Control type="text" value={venueName} onChange={e => setVenueName(e.target.value)} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Venue Address</Form.Label>
+                    <Form.Control type="text" value={venueAddress} onChange={e => setVenueAddress(e.target.value)} />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Table bordered size="sm">
+                <thead>
+                  <tr>
+                    <th>
+                      <Form.Check
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
+                    <th>Services</th>
+                    <th>Price</th>
+                    <th>Margin Price</th>
+                    <th>Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {services.map((service, idx) => (
+                    <tr key={service.id}>
+                      <td>
+                        <Form.Check
+                          type="checkbox"
+                          checked={service.checked}
+                          onChange={() => handleServiceCheck(service.id)}
+                        />
+                      </td>
+                      <td>{service.name}</td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.price}
+                          disabled // Only Qty editable
+                        />
+                      </td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.marginPrice}
+                          disabled // Only Qty editable
+                        />
+                      </td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.qty}
+                          onChange={e => handleServiceQty(service.id, e.target.value)}
+                          disabled={!service.checked}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Total row */}
+                  <tr>
+                    <td colSpan="2" className="fw-semibold text-end">Total</td>
+                    <td className="fw-semibold">₹{services.filter(s => s.checked).reduce((sum, s) => sum + (parseFloat(s.price) || 0) * (parseInt(s.qty) || 1), 0).toLocaleString()}</td>
+                    <td className="fw-semibold">₹{services.filter(s => s.checked).reduce((sum, s) => sum + (parseFloat(s.marginPrice) || 0) * (parseInt(s.qty) || 1), 0).toLocaleString()}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </Table>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="dark" onClick={handleCreateOrUpdateCustomPackage}>{editingPackageIndex !== null ? 'Update Package' : 'Create Package'}</Button>
+            <Button variant="outline-secondary" onClick={closeCustomModal}>Cancel</Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Preset Package Modal */}
+        <Modal show={showPresetModal} onHide={closePresetModal} centered size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>Add Preset Package</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Select Preset</Form.Label>
+                    <Select
+                      options={presetCategoryOptions}
+                      value={presetCategory}
+                      onChange={handlePresetCategoryChange}
+                      placeholder="Select Preset"
+                    />
+
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Choose Slot</Form.Label>
+                    <Select
+                      options={slotOptions}
+                      value={presetSlot}
+                      onChange={setPresetSlot}
+                      placeholder="Select Slot"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Event Start Date</Form.Label>
+                    <Form.Control type="date" value={presetEventStartDate} onChange={e => setPresetEventStartDate(e.target.value)} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Event End Date</Form.Label>
+                    <Form.Control type="date" value={presetEventEndDate} onChange={e => setPresetEventEndDate(e.target.value)} />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Venue Name</Form.Label>
+                    <Form.Control type="text" value={presetVenueName} onChange={e => setPresetVenueName(e.target.value)} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Venue Address</Form.Label>
+                    <Form.Control type="text" value={presetVenueAddress} onChange={e => setPresetVenueAddress(e.target.value)} />
+                  </Form.Group>
+                </Col>
+              </Row>
+              <Table bordered size="sm">
+                <thead>
+                  <tr>
+                    <th>Services</th>
+                    <th>Price</th>
+                    <th>Margin Price</th>
+                    <th>Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {presetServices.map((service, idx) => (
+                    <tr key={service.id}>
+                      <td>{service.serviceName}</td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.price}
+                          onChange={e => handlePresetServicePrice(service.id, e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.marginPrice}
+                          disabled
+                        />
+                      </td>
+                      <td>
+                        <Form.Control
+                          type="number"
+                          value={service.qty}
+                          onChange={e => handlePresetServiceQty(service.id, e.target.value)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Total row */}
+                  <tr>
+                    <td className="fw-semibold text-end" colSpan="1">Total</td>
+                    <td className="fw-semibold">₹{presetServices.reduce((sum, s) => sum + (parseFloat(s.price) || 0) * (parseInt(s.qty) || 1), 0).toLocaleString()}</td>
+                    <td className="fw-semibold">₹{presetServices.reduce((sum, s) => sum + (parseFloat(s.marginPrice) || 0) * (parseInt(s.qty) || 1), 0).toLocaleString()}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </Table>
+
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="dark" onClick={handleCreateOrUpdatePresetPackage}>{editingPackageIndex !== null ? 'Update Package' : 'Create Package'}</Button>
+            <Button variant="outline-secondary" onClick={closePresetModal}>Cancel</Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Packages Table */}
+        <Card className="p-3 mb-3 border-0 " style={{ background: "#F4F4F4" }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center gap-3">
+              <h4 style={{ fontSize: "18px", marginBottom: "0" }}>Current Quotation</h4>
+            </div>
+            <div className="d-flex justify-content-between align-items-center gap-2">
+              <Button onClick={openPresetModal} variant="primary" className="fw-bold rounded-1 shadow" style={{ fontSize: "14px" }}>
+                + Add Preset Package
+              </Button>
+              <Button onClick={openCustomModal} variant="transparent" className="fw-bold rounded-1 shadow bg-white" style={{ fontSize: "14px" }}>
+                + Add Custom Package
+              </Button>
+            </div>
+          </div>
+          <br />
+          {(!currentQuotationId && packages.length === 0) ? (
+            <div className="alert alert-info mb-3">
+              <p className="mb-0">Please select a quotation from above or create a new package by clicking 'Add Custom Package'.</p>
+            </div>
+          ) : (
+            <div className="d-flex flex-wrap gap-4 justify-content-start">
+              {packages.map((pkg, index) => {
+                const totalPrice = pkg.services.reduce((sum, s) => sum + (parseFloat(s.price) || 0) * (parseInt(s.qty) || 1), 0);
+                const totalMargin = pkg.services.reduce((sum, s) => sum + (parseFloat(s.marginPrice) || 0) * (parseInt(s.qty) || 1), 0);
+
+                return (
+                  <Card className="mb-4 shadow-sm w-100" key={pkg.id || index}>
+                    <div className="d-flex justify-content-between p-4">
+                      <div>
+                        <p className="fw-bold mb-1" >
+
+                          {pkg.category && pkg.category.includes(' - ')
+                            ? pkg.category.split(' - ')[0]
+                            : pkg.category}
+
+                          {/* {pkg.category} */}
+                          {pkg.type && (
+                            <Badge bg={pkg.type === 'preset' ? 'info' : 'secondary'} className="ms-2" pill>
+                              {pkg.type.charAt(0).toUpperCase() + pkg.type.slice(1)}
+                            </Badge>
+                          )}
+                        </p>
+
+                        <p className="text-muted mb-2" style={{ lineHeight: ".5", marginTop: "10px" }}>
+                          {formatDate(pkg.eventStartDate)} - {formatDate(pkg.eventEndDate)}, {pkg.slot}
+                        </p>
+                        {(pkg.venueName || pkg.venueAddress) && (
+                          <div className="mb-4">
+                            {pkg.venueName && (
+                              <p className="mb-1" style={{ lineHeight: "1.2" }}><strong>Venue:</strong> {pkg.venueName}</p>
+                            )}
+                            {pkg.venueAddress && (
+                              <p className="mb-0" style={{ lineHeight: "1.2", maxWidth: "400px", wordWrap: "break-word" }}><strong>Address:</strong> {pkg.venueAddress}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="d-flex gap-2 flex-column">
+                        <Button variant="link" className="d-flex align-items-center fw-bold rounded-1 shadow-sm rounded-5 bg-white text-primary" onClick={() => handleEditPackage(pkg, index)}>
+                          <FaEdit /> Edit
+                        </Button>
+                        {/* 2. Delete Individual Package */}
+                        <Button variant="transparent" className="fw-bold rounded-1 shadow-sm rounded-5 bg-white text-danger" style={{ fontSize: "14px" }} onClick={() => {
+                          setPackages(packages.filter((_, i) => i !== index));
+                        }}>
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    <Table bordered className="table-sm ">
+                      <thead className="table-light">
+                        <tr>
+                          <th style={{ width: "40%" }} className="px-4">Services</th>
+                          <th style={{ width: "15%" }} className="text-center">Qty</th>
+                          <th style={{ width: "15%" }} className="text-right">Price</th>
+                          <th style={{ width: "15%" }} className="text-right">Margin Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pkg.services && pkg.services.length > 0 ? (
+                          pkg.services.map((service, idx) => (
+                            <tr key={service.id || idx}>
+                              <td className="px-4">{service.serviceName || service.name}</td>
+                              <td className="text-center">{service.qty}</td>
+                              <td className="text-right">₹{(parseFloat(service.price) * (parseInt(service.qty) || 1)).toLocaleString()}</td>
+                              <td className="text-right">₹{(parseFloat(service.marginPrice) * (parseInt(service.qty) || 1)).toLocaleString()}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="text-center">No services selected</td>
+                          </tr>
+                        )}
+                        <tr>
+                          <td colSpan="2" className="fw-semibold px-4 text-right">Total</td>
+                          <td className="fw-semibold text-right">₹{typeof totalPrice === 'number' ? totalPrice.toLocaleString() : "-"}</td>
+                          <td className="fw-semibold text-right">₹{typeof totalMargin === 'number' ? totalMargin.toLocaleString() : "-"}</td>
+                        </tr>
+                      </tbody>
+                    </Table>
+                  </Card>
+                );
+              })}
+
+              <Card className="mb-4 shadow-sm w-100">
+                <div className="p-4">
+                  <div className="d-flex justify-content-between">
+                    <p className="fw-bold">Total Package Amount</p>
+                    <p className="fw-bold">₹{typeof totalPackageAmount === 'number' ? totalPackageAmount.toLocaleString() : "-"}</p>
+                  </div>
+
+                  <div className="d-flex justify-content-between">
+                    <p className="fw-bold">Total Margin Amount</p>
+                    <p className="fw-bold">₹{typeof totalMarginFinal === 'number' ? totalMarginFinal.toLocaleString() : "-"}</p>
+                  </div>
+
+                  <hr />
+
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <p className="mb-0">Discount</p>
+                      <div style={{
+                        border: "1px solid black",
+                        padding: "2px",
+                        backgroundColor: "white",
+                      }}>
+                        <input
+                          placeholder="Add discount"
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            setDiscountPer(value);
+                          }}
+                          value={discountPer}
+                          className=""
+                          style={{
+                            outline: "none",
+                            width: "140px",
+                            textAlign: "right",
+                            fontWeight: 600,
+                            border: "none",
+                            background: "transparent"
+                          }}
+                        />
+                        %
+                      </div>
+                    </div>
+
+                    {discountValue !== 0 && (
+                      <div className="d-flex justify-content-end">
+                        <p className="text-danger">- ₹{discountValue.toLocaleString()}</p>
+                      </div>
+                    )}
+
+                    <div className="d-flex justify-content-between align-items-center mt-2">
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="checkbox"
+                          checked={isGstApplied}
+                          onChange={handleGstToggle}
+                          style={{
+                            marginRight: "10px",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <p className="mb-0" style={{ fontSize: "18px" }}>
+                          GST <span className="" style={{ fontSize: "16px" }}>18%</span>
+                        </p>
+                      </div>
+                      <p className="mb-0">₹{typeof gstValue === 'number' ? gstValue.toLocaleString() : "-"}</p>
+                    </div>
+                  </div>
+
+                  <hr />
+
+                  <div className="d-flex justify-content-between text-success">
+                    <p className="">Grand Total</p>
+                    <p className="fw-semibold">₹{typeof totalAfterDiscount === 'number' ? totalAfterDiscount.toLocaleString() : "-"}</p>
+                  </div>
+
+                  <hr />
+
+                  <div className="d-flex justify-content-between text-primary">
+                    <p className="">Margin after Discount</p>
+                    <p className="fw-semibold">₹{typeof marginAfterDiscount === 'number' ? marginAfterDiscount.toLocaleString() : "-"}</p>
+                  </div>
+
+                  <div className="d-flex justify-content-between text-primary">
+                    <p className="">GST on Margin</p>
+                    <p className="fw-semibold">₹{typeof marginGstValue === 'number' ? marginGstValue.toLocaleString() : "-"}</p>
+                  </div>
+
+                  <div className="d-flex justify-content-between text-success">
+                    <p className="">Final Margin Total</p>
+                    <p className="fw-semibold">₹{typeof totalMarginFinal === 'number' ? totalMarginFinal.toLocaleString() : "-"}</p>
+                  </div>
+                </div>
+              </Card>
+
+            </div>
+          )}
+        </Card>
+
+        {packages.length > 0 && (
+          <Card className="p-3 mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 style={{ fontSize: "18px", marginBottom: "0" }}>
+                Installments
+              </h4>
+              <Button
+                variant="transparent"
+                className="fw-bold rounded-1 shadow bg-white"
+                onClick={() => {
+                  setEditingInstallmentIndex(null);
+                  setNewInstallmentName(`Installment ${installments.length + 1}`);
+                  setNewInstallmentPercentage("");
+                  setShowInstallmentModal(true);
+                }}
+                style={{ fontSize: "14px" }}
+                disabled={installments.reduce((sum, inst) => sum + inst.percentage, 0) >= 100}
+              >
+                + Add Installment
+              </Button>
+            </div>
+            {installments.reduce((sum, inst) => sum + inst.percentage, 0) >= 100 && (
+              <div className="alert alert-success my-2">
+                All   {installments.reduce((sum, inst) => sum + inst.percentage, 0)}% of the amount has been allocated to {installments.length} installments.
+              </div>
+            )}
+
+            {/* <div className="mb-3">
+              <p className="text-muted small">
+                {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
+                of total amount allocated ({installments.length} installments)
+              </p>
+            </div> */}
+
+            <Table bordered responsive className="mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Installment</th>
+                  <th>Percentage</th>
+                  <th>Amount</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {installments.length > 0 ? (
+                  installments.map((inst, index) => (
+                    <tr key={inst.id}>
+                      <td>{inst.name}</td>
+                      <td>{inst.percentage}%</td>
+                      <td>₹{inst.amount !== undefined && inst.amount !== null ? inst.amount.toLocaleString() : "-"}</td>
+                      <td className="text-center">
+                        <Button
+                          variant="link"
+                          className="p-0 me-3"
+                          onClick={() => handleEditInstallment(index)}
+                        >
+                          <FaEdit style={{ fontSize: "18px", color: "#0d6efd" }} />
+                        </Button>
+                        <Button
+                          variant="link"
+                          className="p-0"
+                          onClick={() => handleDeleteInstallment(index)}
+                        >
+                          <FaTrash style={{ fontSize: "16px", color: "#dc3545" }} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="text-center text-muted">
+                      No installments created yet. Click "Add Installment" to create one.
+                    </td>
+                  </tr>
+                )}
+                {installments.length > 0 && (
+                  <tr className="fw-bold">
+                    <td>Total</td>
+                    <td>
+                      {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
+                    </td>
+                    <td colSpan="2">
+                      ₹{typeof totalAfterDiscount === 'number' ? totalAfterDiscount.toLocaleString() : "-"}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+
+            {/* Installment Modal */}
+            <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)} centered>
+              <Modal.Header closeButton>
+                <Modal.Title>{editingInstallmentIndex !== null ? 'Edit Installment' : 'Add Installment'}</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Installment Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={newInstallmentName}
+                      onChange={e => setNewInstallmentName(e.target.value)}
+                      placeholder="Enter installment name"
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Percentage</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={newInstallmentPercentage}
+                      onChange={(e) => setNewInstallmentPercentage(e.target.value)}
+                      placeholder="Enter percentage (e.g. 25)"
+                      min="1"
+                      max={availablePercentage}
+                      disabled={availablePercentage === 0}
+                    />
+                  </Form.Group>
+                </Form>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="dark" onClick={handleAddInstallment} disabled={availablePercentage === 0}>
+                  {editingInstallmentIndex !== null
+                    ? "Update Installment"
+                    : "Add Installment"}
+                </Button>
+                <Button variant="outline-secondary" onClick={() => setShowInstallmentModal(false)}>
+                  Cancel
+                </Button>
+              </Modal.Footer>
+            </Modal>
+          </Card>
+        )}
+      </div>
+
+
+      {/* Add Save Quotation and View Quotation buttons at the bottom */}
+      {(packages.length > 0) && (
+        <div className="d-flex justify-content-end gap-2 mt-4">
+          <Button variant="dark" onClick={() => setShowSaveModal(true)}>
+            {currentQuotationId ? 'Update Quotation' : 'Save Quotation'}
+          </Button>
+          {currentQuotationId && (
+            <Button variant="outline-dark" onClick={() => navigate(`/quote/finalized-quotation/${currentQuotationId}`)}>
+              View Quotation
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Save Quotation Modal */}
+      <Modal show={showSaveModal} onHide={() => setShowSaveModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{currentQuotationId ? 'Update Quotation' : 'Save Quotation'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Quotation Title</Form.Label>
+              <Form.Control
+                type="text"
+                value={quoteTitle}
+                onChange={e => setQuoteTitle(e.target.value)}
+                placeholder="Enter quotation title"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Description (optional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={quoteDescription}
+                onChange={e => setQuoteDescription(e.target.value)}
+                placeholder="Enter description (optional)"
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSaveModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={currentQuotationId ? handleUpdateQuotation : handleSaveQuotation}>
+            {currentQuotationId ? 'Update Quotation' : 'Save Quotation'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
+  );
+};
+
+export default CreateQuote;
+
