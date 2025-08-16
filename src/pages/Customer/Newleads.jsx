@@ -107,6 +107,7 @@ const Newleads = () => {
             <thead className="text-white text-center sticky-top" style={{ backgroundColor: "#343a40" }}>
               <tr>
                 <th style={{ fontSize: "14px" }}>Sl.No</th>
+                <th style={{ fontSize: "14px" }}>Query Id</th>
                 <th style={{ fontSize: "14px" }}>Name</th>
                 <th style={{ fontSize: "14px" }}>Phone</th>
                 <th style={{ fontSize: "14px" }}>Query Created</th>
@@ -128,6 +129,7 @@ const Newleads = () => {
                 return (
                   <tr className="text-center fw-semibold" style={{ fontSize: "12px" }} key={item._id}>
                     <td>{String((currentPage - 1) * ITEMS_PER_PAGE + i + 1).padStart(2, "0")}</td>
+                    <td>{query.queryId}</td>
                     <td>{leadName || "-"}</td>
                     <td>{leadPhone || "-"}</td>
                     <td>{formatDate(query.createdAt)}</td>

@@ -192,22 +192,22 @@ const PresetQuoteModal = ({ show, onHide, onSave, preset }) => {
       return;
     }
 
-    // Validate prices and quantities
-    const invalidService = selectedServices.find(
-      (s) =>
-        s.price === undefined ||
-        s.price <= 0 ||
-        s.marginPrice === undefined ||
-        s.marginPrice < 0 ||
-        s.qty === undefined ||
-        s.qty < 1
-    );
-    if (invalidService) {
-      toast.error(
-        "All selected services must have a price > 0, margin price ≥ 0, and quantity ≥ 1"
-      );
-      return;
-    }
+    // // Validate prices and quantities
+    // const invalidService = selectedServices.find(
+    //   (s) =>
+    //     s.price === undefined ||
+    //     // s.price <= 0 ||
+    //     s.marginPrice === undefined ||
+    //     s.marginPrice < 0 ||
+    //     s.qty === undefined ||
+    //     s.qty < 1
+    // );
+    // if (invalidService) {
+    //   toast.error(
+    //     "All selected services must have a price > 0, margin price ≥ 0, and quantity ≥ 1"
+    //   );
+    //   return;
+    // }
 
     const presetPackage = {
       category: selectedCategory,

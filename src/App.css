@@ -77,3 +77,71 @@
   max-width: 800px; 
 }
 
+
+
+.vendor-table {
+  font-size: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.vendor-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8f9fb;
+  border-bottom: 1px solid #eaecef !important;
+  color: #2b2f38;
+  font-weight: 700;
+  letter-spacing: .2px;
+  z-index: 1;
+}
+.vendor-table th,
+.vendor-table td {
+  vertical-align: middle;
+  padding: 8px 10px !important;
+}
+.vendor-table tbody tr:hover {
+  background: #fbfcff;
+}
+
+/* Chips (same styling for vendor & assistant; just different tones) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-weight: 600;
+}
+/* Stronger selectors to beat any later background rules */
+.chip.chip-success {
+  background: #eaf8f0 !important;   /* light green */
+  border-color: #cfeedd !important;
+  color: #166534 !important;         /* deep green text */
+}
+
+.chip.chip-primary {
+  background: #eef6ff !important;    /* light blue */
+  border-color: #dbeafe !important;
+  color: #1d4ed8 !important;         /* blue text */
+}
+
+.unit-badge {
+  font-size: 11px;
+  color: #6c757d;
+  margin-left: .25rem;
+}
+
+/* Tiny icon button */
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px !important;
+  border: 1px solid #e7e9ee !important;
+  background: #fff !important;
+}
