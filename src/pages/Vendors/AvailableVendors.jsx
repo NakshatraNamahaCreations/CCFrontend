@@ -63,7 +63,7 @@
 //       toast.error("Service and quotation ID are required to assign a vendor");
 //       return;
 //     }
-  
+
 //     try {
 //       const res = await axios.put(
 //         `http://localhost:5000/api/quotations/assign-vendor/${quotationId}/package/${packageId}/service/${serviceName}`,
@@ -72,10 +72,10 @@
 //           vendorName: vendor.name,
 //         }
 //       );
-  
+
 //       if (res.data.success) {
 //         toast.success("Vendor assigned successfully");
-  
+
 //         // ✅ Redirect to return path after successful assignment
 //         navigate(returnPath || "/quotations");
 //       } else {
@@ -86,8 +86,6 @@
 //       toast.error("Error assigning vendor");
 //     }
 //   };
-  
-
 
 //   return (
 //     <div className="container py-2 rounded vh-100" style={{ background: "#F4F4F4" }}>
@@ -195,7 +193,6 @@
 
 // export default AvailableVendors;
 
-
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Card, Table, Button, Badge, Form } from "react-bootstrap";
@@ -217,11 +214,16 @@ const AvailableVendors = () => {
     packageId,
     serviceId,
     unitIndex,
+    slot,
+    eventStartDate,
     isReassign,
   } = location.state || {};
 
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  console.log("slot", slot);
+  console.log("eventStartDate", eventStartDate);
 
   useEffect(() => {
     // Validate inputs when assignment is intended
@@ -231,30 +233,63 @@ const AvailableVendors = () => {
       return;
     }
 
+    // const fetchVendors = async () => {
+    //   setLoading(true);
+    //   try {
+    //     const res = await axios.get(
+    //       `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+    //         serviceName
+    //       )}`
+    //     );
+
+    //     if (res.data?.success) {
+    //       const allVendors = res.data.vendors || res.data.data || [];
+    //       setVendors(allVendors);
+    //       if (allVendors.length === 0) toast.warn("No vendors found");
+    //     } else {
+    //       toast.error("Failed to load vendors");
+    //     }
+    //   } catch (error) {
+    //     console.error("Fetch vendors error:", error);
+    //     toast.error("Error fetching vendors");
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+
     const fetchVendors = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}`
-        );
+  setLoading(true);
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${eventStartDate}`
+    );
 
-        if (res.data?.success) {
-          const allVendors = res.data.vendors || res.data.data || [];
-          setVendors(allVendors);
-          if (allVendors.length === 0) toast.warn("No vendors found");
-        } else {
-          toast.error("Failed to load vendors");
-        }
-      } catch (error) {
-        console.error("Fetch vendors error:", error);
-        toast.error("Error fetching vendors");
-      } finally {
-        setLoading(false);
+    if (res.data?.success) {
+      const availableVendors = res.data.data.availableVendors || [];
+      setVendors(availableVendors);
+      if (availableVendors.length === 0) {
+        toast.warn(`No available vendors for ${serviceName} on ${selectedDate}`);
       }
-    };
-
+    } else {
+      toast.error("Failed to load vendors");
+    }
+  } catch (error) {
+    console.error("Fetch vendors error:", error);
+    toast.error("Error fetching vendors");
+  } finally {
+    setLoading(false);
+  }
+};
     fetchVendors();
-  }, [navigate, returnPath, quotationId, packageId, serviceId, unitIndex, serviceName]);
+  }, [
+    navigate,
+    returnPath,
+    quotationId,
+    packageId,
+    serviceId,
+    unitIndex,
+    serviceName,
+  ]);
 
   const handleAssignVendor = async (vendor) => {
     try {
@@ -262,13 +297,15 @@ const AvailableVendors = () => {
       const body = {
         vendorId: vendor._id || vendor.id,
         vendorName: vendor.name,
+        slot,
+        eventStartDate,
       };
       const res = await axios.put(url, body);
 
       if (res.data?.success) {
         toast.success("Vendor assigned successfully");
         // navigate(returnPath || "/quotations");
-        navigate(-1)
+        navigate(-1);
       } else {
         toast.error(res.data?.message || "Failed to assign vendor");
       }
@@ -279,32 +316,19 @@ const AvailableVendors = () => {
   };
 
   return (
-    <div className="container py-2 rounded vh-100" style={{ background: "#F4F4F4" }}>
+    <div
+      className="container py-2 rounded vh-100"
+      style={{ background: "#F4F4F4" }}
+    >
       <div className="d-flex gap-2 align-items-center justify-content-between p-2 rounded">
         <div className="w-50 d-flex gap-2 align-items-center">
-          <div className="w-100 bg-white d-flex gap-2 align-items-center px-2 rounded">
-            <IoSearch size={16} className="text-muted" />
-            <Form className="d-flex flex-grow-1">
-              <Form.Group className="w-100">
-                <Form.Control
-                  type="text"
-                  placeholder="Enter Service name"
-                  style={{ paddingLeft: 4, border: "none", outline: "none", boxShadow: "none", fontSize: 14 }}
-                  disabled
-                  value={serviceName || ""}
-                  readOnly
-                />
-              </Form.Group>
-            </Form>
+          <div className="w-50 bg-white d-flex gap-2 align-items-center p-2 rounded" style={{fontWeight:"700"}}>
+          {serviceName}
+          
           </div>
-          <img src={sortIcon} alt="sortIcon" style={{ width: 25, cursor: "pointer" }} />
-          <img src={filterIcon} alt="filterIcon" style={{ width: 25, cursor: "pointer" }} />
+         
         </div>
-        <div className="text-end">
-          <Button variant="light-gray" className="btn rounded-5 bg-white border-2 shadow-sm" style={{ fontSize: 14 }}>
-            Download Excel
-          </Button>
-        </div>
+      
       </div>
 
       <div className="container my-4">
@@ -331,7 +355,11 @@ const AvailableVendors = () => {
                   </thead>
                   <tbody>
                     {vendors.map((vendor) => (
-                      <tr key={vendor._id || vendor.id} className="text-center fw-semibold" style={{ fontSize: 12 }}>
+                      <tr
+                        key={vendor._id || vendor.id}
+                        className="text-center fw-semibold"
+                        style={{ fontSize: 12 }}
+                      >
                         <td>
                           <img
                             src={
@@ -340,12 +368,18 @@ const AvailableVendors = () => {
                             }
                             alt="Profile"
                             className="rounded-circle"
-                            style={{ width: 40, height: 40, objectFit: "cover" }}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              objectFit: "cover",
+                            }}
                           />
                         </td>
                         <td>{vendor.name}</td>
                         <td>{vendor.phoneNo}</td>
-                        <td>{vendor.services?.map((s) => s.name).join(", ")}</td>
+                        <td>
+                          {vendor.services?.map((s) => s.name).join(", ")}
+                        </td>
                         <td>{vendor.expertiseLevel}</td>
                         <td>{vendor.category}</td>
                         <td>
@@ -356,7 +390,12 @@ const AvailableVendors = () => {
                             variant="light"
                             className="btn-sm text-black fw-bold"
                             onClick={() => handleAssignVendor(vendor)}
-                            disabled={!quotationId || !packageId || !serviceId || unitIndex == null}
+                            disabled={
+                              !quotationId ||
+                              !packageId ||
+                              !serviceId ||
+                              unitIndex == null
+                            }
                           >
                             Assign
                           </Button>

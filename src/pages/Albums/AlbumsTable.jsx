@@ -7,7 +7,7 @@ import { ALBUM_TEMPLATES, BOX_TYPES, SHEET_TYPES } from "./AddAlbumModal";
 import { computeAlbumTotal, fmt } from "../../utils/albumUtils";
 
 const AlbumsTable = ({
-  albums = [], 
+  albums = [],
   onRemove,
   onView,
   onEdit,
@@ -41,7 +41,7 @@ const AlbumsTable = ({
           </thead>
           <tbody>
             {albums.map((a, i) => {
-              console.log("a",a)
+              console.log("a", a)
               const albumKey = getAlbumId(a); // Use this for keys and operations
               const t = ALBUM_TEMPLATES.find((x) => x.id === a.templateId);
               const b = BOX_TYPES.find((x) => x.id === a.boxTypeId);

@@ -314,7 +314,7 @@ const InstallmentDetails = () => {
       };
   
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${quotationId}/installment/${selectedInstallment._id}`,
+        `http://localhost:5000/api/quotations/${quotationId}/installments/${selectedInstallment._id}/first-payment`,
         payload
       );
   

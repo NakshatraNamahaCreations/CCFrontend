@@ -468,6 +468,7 @@ const AddleadsForm = () => {
                       <th>Event</th>
                       <th>Start Date</th>
                       <th>End Date</th>
+                      <th>Status</th>
                       <th>Action</th>
                     </tr>
                   </thead>
@@ -491,8 +492,16 @@ const AddleadsForm = () => {
                             <div key={j}>{formatDate(ev.eventEndDate)}</div>
                           ))}
                         </td>
+                        <td>{q.status}</td>
                         <td>
-                          <IoEye size={20} />
+                          {q.status === "Booked" && (
+                            <IoEye
+                              size={20}
+                              onClick={() =>
+                                navigate(`/booking/by-query/${q._id}`)
+                              }
+                            />
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -577,7 +586,7 @@ const AddleadsForm = () => {
                         name="email"
                         value={person.email}
                         onChange={(e) => handlePersonChange(idx, e)}
-                        required={!leadFound}
+                        // required={!leadFound}
                       />
                     </Form.Group>
                   </Col>

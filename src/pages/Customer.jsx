@@ -26,22 +26,11 @@ const Customer = () => {
     <div className="container py-2 rounded vh-100" style={{ background: "#F4F4F4" }}>
       <div className=" d-flex gap-2 align-items-center justify-content-end p-2 rounded">
 
-        <div className="d-flex gap-2 ">
+        <div className="">
           <Button onClick={() => navigate("/customer/addLeads")}
             variant="light-gray" className="btn rounded-5 bg-white border-2 fw-bold shadow-sm" style={{ fontSize: "14px" }}>
             + Add Leads
           </Button>
-
-          <div className="text-end ">
-            <Button
-              // onClick={handleDownloadExcel}
-              variant="light-gray"
-              className="btn rounded-5 bg-white  border-2 shadow-sm"
-              style={{ fontSize: "14px" }}
-            >
-              Download Excel
-            </Button>
-          </div>
         </div>
       </div>
 

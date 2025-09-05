@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button, Card, Table, Container } from "react-bootstrap";
 import { IoChevronForward } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
-import dayjs from "dayjs";
+
 
 const OngoingEvents = () => {
   const navigate = useNavigate();

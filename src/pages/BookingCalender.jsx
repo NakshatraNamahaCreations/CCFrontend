@@ -1,252 +1,283 @@
-// import React, { useEffect, useState } from "react";
-// import { Calendar, dayjsLocalizer } from "react-big-calendar";
-// import dayjs from "dayjs";
-// import "react-big-calendar/lib/css/react-big-calendar.css";
-// import { Container, Card } from "react-bootstrap";
-// import { useNavigate } from "react-router-dom";
-// import axios from "axios";
-
-// const localizer = dayjsLocalizer(dayjs);
-
-// const BookingCalender = () => {
-//   const navigate = useNavigate();
-//   const [events, setEvents] = useState([]);
-
-//   useEffect(() => {
-//     const fetchBookedQuotations = async () => {
-//       try {
-//         const response = await axios.get("http://localhost:5000/api/quotations/status/Booked");
-//         if (response.data.success) {
-//           // Aggregate event counts by date, only for today and future dates
-//           const dateCountMap = {};
-//           const today = dayjs().startOf('day');
-//           response.data.quotations.forEach(quotation => {
-//             quotation.packages.forEach(pkg => {
-//               const date = pkg.eventStartDate;
-//               if (dayjs(date).isBefore(today)) return; // Skip past dates
-//               if (dateCountMap[date]) {
-//                 dateCountMap[date]++;
-//               } else {
-//                 dateCountMap[date] = 1;
-//               }
-//             });
-//           });
-
-//           // Convert to calendar events
-//           const calendarEvents = Object.entries(dateCountMap).map(([date, count]) => ({
-//             title: `${count} Events`,
-//             start: new Date(date),
-//             end: new Date(date),
-//             resource: { date },
-//           }));
-
-//           setEvents(calendarEvents);
-//         } else {
-//           console.error("Error loading events:", response.data.message);
-//         }
-//       } catch (err) {
-//         console.error("Error fetching booked quotations:", err);
-//       }
-//     };
-
-//     fetchBookedQuotations();
-//   }, []);
-
-//   const handleEventClick = (event) => {
-//     const selectedDate = dayjs(event.start).format("YYYY-MM-DD");
-//     navigate("/booking-list", { state: { date: selectedDate } });
-//   };
-
-//   return (
-//     <Container>
-//       <Card className="mt-3">
-//         <Card.Body>
-//           <Calendar
-//             localizer={localizer}
-//             events={events}
-//             startAccessor="start"
-//             endAccessor="end"
-//             defaultView="month"
-//             views={["month", "agenda"]}
-//             style={{ height: 460 }}
-//             eventPropGetter={(event) => ({
-//               style: {
-//                 backgroundColor: "#3C3D37",
-//                 color: "white",
-//                 borderRadius: "4px",
-//                 border: "none",
-//                 padding: "2px 6px",
-//               },
-//             })}
-//             onSelectEvent={handleEventClick}
-//           />
-//         </Card.Body>
-//       </Card>
-//     </Container>
-//   );
-// };
-
-// export default BookingCalender;
 
 import React, { useEffect, useState } from "react";
 import { Calendar, dayjsLocalizer } from "react-big-calendar";
 import dayjs from "dayjs";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Container, Card, Table, Tabs, Tab } from "react-bootstrap";
+import { Container, Card, Table, Tabs, Tab, Form, InputGroup, Button, Spinner, Badge } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import DynamicPagination from "./DynamicPagination";
 
 const localizer = dayjsLocalizer(dayjs);
 
-const BookingCalender = () => {
+const BookingCalendar = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
-  const [key, setKey] = useState("calendar");
+  const [activeTab, setActiveTab] = useState("calendar");
+  const [loading, setLoading] = useState({
+    calendar: false,
+    bookings: false
+  });
+  const [error, setError] = useState(null);
 
+  // Pagination and search state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
+  // Fetch calendar events (Booked only)
   useEffect(() => {
-    const fetchBookedQuotations = async () => {
+    const fetchCalendarEvents = async () => {
       try {
+        setLoading(prev => ({ ...prev, calendar: true }));
         const response = await axios.get(
           "http://localhost:5000/api/quotations/status/Booked"
         );
 
         if (response.data.success) {
-          const quotations = response.data.quotations;
-          setAllBookings(quotations);
-
-          // 📌 Prepare Calendar Event Counts
           const dateCountMap = {};
           const today = dayjs().startOf("day");
 
-          quotations.forEach((quotation) => {
-            quotation.packages.forEach((pkg) => {
+          (response.data.quotations || []).forEach((quotation) => {
+            (quotation.packages || []).forEach((pkg) => {
               const date = pkg.eventStartDate;
-              if (dayjs(date).isBefore(today)) return;
+              if (!date || dayjs(date).isBefore(today)) return;
               dateCountMap[date] = (dateCountMap[date] || 0) + 1;
             });
           });
 
-          const calendarEvents = Object.entries(dateCountMap).map(
-            ([date, count]) => ({
-              title: `${count} Events`,
+          setEvents(
+            Object.entries(dateCountMap).map(([date, count]) => ({
+              title: `${count} ${count === 1 ? 'Event' : 'Events'}`,
               start: new Date(date),
               end: new Date(date),
               resource: { date },
-            })
+            }))
           );
-
-          setEvents(calendarEvents);
         }
       } catch (err) {
-        console.error("Error fetching booked quotations:", err);
+        console.error("Error fetching calendar events:", err);
+        setError("Failed to load calendar events. Please try again later.");
+      } finally {
+        setLoading(prev => ({ ...prev, calendar: false }));
       }
     };
 
-    fetchBookedQuotations();
-  }, []);
+    if (activeTab === "calendar") {
+      fetchCalendarEvents();
+    }
+  }, [activeTab]);
+
+  // Fetch all bookings (Booked and Completed)
+  useEffect(() => {
+    const fetchAllBookings = async () => {
+      try {
+        setLoading(prev => ({ ...prev, bookings: true }));
+        const response = await axios.get(
+          `http://localhost:5000/api/quotations/booked-completed`,
+          {
+            params: {
+              page: currentPage,
+              limit: itemsPerPage,
+              search: searchTerm
+            }
+          }
+        );
+
+        if (response.data.success) {
+          setAllBookings(response.data.quotations || []);
+          setTotalPages(response.data.totalPages || 1);
+        }
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+        setError("Failed to load bookings. Please try again later.");
+      } finally {
+        setLoading(prev => ({ ...prev, bookings: false }));
+      }
+    };
+
+    if (activeTab === "allBookings") {
+      fetchAllBookings();
+    }
+  }, [activeTab, currentPage, searchTerm]);
 
   const handleEventClick = (event) => {
     const selectedDate = dayjs(event.start).format("YYYY-MM-DD");
     navigate("/booking-list", { state: { date: selectedDate } });
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setSearchTerm(searchInput.trim());
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const isLoading = loading[activeTab === "calendar" ? "calendar" : "bookings"];
+
   return (
-    <Container>
-      <Card className="mt-3">
+    <Container className="py-3">
+      <Card>
         <Card.Body>
-          <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3">
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(k) => setActiveTab(k)}
+            className="mb-3"
+          >
             {/* Calendar Tab */}
             <Tab eventKey="calendar" title="Calendar View">
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                defaultView="month"
-                views={["month", "agenda"]}
-                style={{ height: 460 }}
-                eventPropGetter={() => ({
-                  style: {
-                    backgroundColor: "#3C3D37",
-                    color: "white",
-                    borderRadius: "4px",
-                    border: "none",
-                    padding: "2px 6px",
-                  },
-                })}
-                onSelectEvent={handleEventClick}
-              />
+              {isLoading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" variant="primary" />
+                </div>
+              ) : error ? (
+                <div className="alert alert-danger">{error}</div>
+              ) : (
+                <Calendar
+                  localizer={localizer}
+                  events={events}
+                  startAccessor="start"
+                  endAccessor="end"
+                  defaultView="month"
+                  views={["month", "agenda"]}
+                  style={{ height: 500 }}
+                  eventPropGetter={() => ({
+                    style: {
+                      backgroundColor: "#3C3D37",
+                      color: "white",
+                      borderRadius: "4px",
+                      border: "none",
+                      padding: "2px 6px",
+                    },
+                  })}
+                  onSelectEvent={handleEventClick}
+                />
+              )}
             </Tab>
 
             {/* All Bookings Tab */}
             <Tab eventKey="allBookings" title="All Bookings">
-              <div style={{ overflowX: "auto" }}>
-                <Table
-                  bordered={false}
-                  hover
-                  style={{
-                    borderCollapse: "separate",
-                    borderSpacing: "0 8px",
-                    width: "100%",
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background: "#f9f9f9",
-                        fontSize: "14px",
-                        textAlign: "center",
-                      }}
+              <div className="d-flex justify-content-between mb-3">
+                <Form onSubmit={handleSearchSubmit} style={{ width: "350px" }}>
+                  <InputGroup>
+                    <Form.Control
+                      type="text"
+                      placeholder="Search by booking ID"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <Button
+                      variant="dark"
+                      type="submit"
+                      disabled={isLoading}
                     >
-                      <th>Sl.no</th>
-                      <th>Booking Id</th>
-                      <th>Event (Category - Date)</th>
-                      <th>Customer Name</th>
-                      <th>Phone</th>
-                      <th>Total Amount</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allBookings.map((q, index) => {
-                      const events = q.packages.map((pkg, i) => (
-                        <div key={i}>
-                          {pkg.categoryName} -{" "}
-                          {dayjs(pkg.eventStartDate).format("DD/MM/YY")}
-                        </div>
-                      ));
-                      const names = q.leadId?.persons?.map((p, i) => (
-                        <div key={i}>{p.name}</div>
-                      ));
-                      const phones = q.leadId?.persons?.map((p, i) => (
-                        <div key={i}>{p.phoneNo}</div>
-                      ));
-
-                      return (
-                        <tr
-                          key={q._id}
-                          style={{
-                            backgroundColor: "#fff",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-                            fontSize: "13px",
-                            textAlign: "center",
-                          }}
-                          onClick={()=>navigate(`/booking/booking-details/${q?._id}`)}
-                        >
-                          <td>{String(index + 1).padStart(2, "0")}</td>
-                          <td>{q.quotationId}</td>
-                          <td>{events}</td>
-                          <td>{names}</td>
-                          <td>{phones}</td>
-                          <td>₹{q.totalAmount.toLocaleString()}</td>
-                          <td>{q.bookingStatus}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
+                      Search
+                    </Button>
+                    {searchTerm && (
+                      <Button
+                        variant="outline-secondary"
+                        onClick={handleClearSearch}
+                        disabled={isLoading}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </InputGroup>
+                </Form>
               </div>
+
+              {isLoading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" variant="primary" />
+                </div>
+              ) : error ? (
+                <div className="alert alert-danger">{error}</div>
+              ) : (
+                <>
+                  <div className="table-responsive">
+                    <Table hover className="mb-0">
+                      <thead className="table-light" style={{fontSize:"14px"}}>
+                        <tr>
+                          <th>#</th>
+                          <th>Booking ID</th>
+                          <th>Event Details</th>
+                          <th>Customer</th>
+                          <th>Contact</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody style={{fontSize:"14px"}}>
+                        {allBookings.length > 0 ? (
+                          allBookings.map((booking, index) => (
+                            <tr
+                              key={booking._id}
+                              onClick={() => navigate(`/booking/booking-details/${booking._id}`)}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                              <td>{booking.quotationId || 'N/A'}</td>
+                              <td>
+                                {booking.packages?.map((pkg, i) => (
+                                  <div key={i}>
+                                    {pkg.categoryName || 'N/A'} - {pkg.eventStartDate ? dayjs(pkg.eventStartDate).format("DD/MM/YY") : 'N/A'}
+                                  </div>
+                                )) || 'N/A'}
+                              </td>
+                              <td>
+                                {booking.leadId?.persons?.map((p, i) => (
+                                  <div key={i}>{p.name || 'N/A'}</div>
+                                )) || 'N/A'}
+                              </td>
+                              <td>
+                                {booking.leadId?.persons?.map((p, i) => (
+                                  <div key={i}>{p.phoneNo || 'N/A'}</div>
+                                )) || 'N/A'}
+                              </td>
+                              <td>₹{(booking.totalAmount || 0).toLocaleString()}</td>
+                              <td>
+                                <Badge 
+                                  bg={
+                                    booking.bookingStatus === 'Booked' ? 'primary' : 
+                                    booking.bookingStatus === 'Completed' ? 'success' : 'secondary'
+                                  }
+                                >
+                                  {booking.bookingStatus || 'N/A'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="7" className="text-center py-4">
+                              {searchTerm ? "No bookings match your search" : "No bookings found"}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </Table>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="d-flex justify-content-center mt-3">
+                      <DynamicPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </Tab>
           </Tabs>
         </Card.Body>
@@ -255,4 +286,4 @@ const BookingCalender = () => {
   );
 };
 
-export default BookingCalender;
+export default BookingCalendar;

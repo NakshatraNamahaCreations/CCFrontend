@@ -16,11 +16,45 @@ const FinishedEvents = () => {
     const fetchFinishedEvents = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:5000/api/quotations/finished");
-        console.log("Raw data from /api/quotations/finished:", response.data);
+        const response = await axios.get("http://localhost:5000/api/quotations/status/Completed");
+        console.log("Raw data from /api/quotations/status/Completed:", response.data);
 
         if (response.data.success) {
-          setFinishedEvents(response.data.data);
+          // Transform the API data to match your component's expected structure
+          const transformedData = response.data.quotations.map((quotation, index) => {
+            // Get the first package for event details
+            const firstPackage = quotation.packages && quotation.packages.length > 0 
+              ? quotation.packages[0] 
+              : {};
+            
+            // Get the first person's name from lead
+            const primaryPerson = quotation.leadId?.persons?.[0] || {};
+            
+            // Get assigned vendors from services
+            const vendors = quotation.packages?.flatMap(pkg => 
+              pkg.services?.flatMap(service => 
+                service.assignedVendors?.filter(vendor => vendor?.vendorName)
+              ) || []
+            ).filter(vendor => vendor) || [];
+            
+            // Get unique vendor names
+            const uniqueVendors = [...new Set(vendors.map(v => v.vendorName))];
+
+            return {
+              slNo: index + 1,
+              name: primaryPerson.name || 'Unknown',
+              bookingId: quotation.quotationId,
+              eventDetails: {
+                name: firstPackage.categoryName || 'No Event',
+                venue: firstPackage.venueName || 'No Venue'
+              },
+              date: firstPackage.eventStartDate || 'No Date',
+              vendor: uniqueVendors.length > 0 ? uniqueVendors.join(', ') : '-',
+              quotationData: quotation // Keep original data for navigation
+            };
+          });
+
+          setFinishedEvents(transformedData);
         } else {
           toast.error("Failed to fetch finished events");
           setFinishedEvents([]);
@@ -35,6 +69,11 @@ const FinishedEvents = () => {
     };
     fetchFinishedEvents();
   }, []);
+
+  const handleRowClick = (quotation) => {
+    // Navigate to booking details with the quotation ID
+    navigate(`/booking/booking-details/${quotation.quotationData._id}`);
+  };
 
   if (loading) {
     return <div className="d-flex justify-content-center align-items-center" style={{ height: "80vh" }}>Loading...</div>;
@@ -51,7 +90,7 @@ const FinishedEvents = () => {
                 <Form.Group className="w-100">
                   <Form.Control
                     type="text"
-                    placeholder="Enter Service name"
+                    placeholder="Search by name or booking ID"
                     style={{
                       paddingLeft: "4px",
                       border: "none",
@@ -102,9 +141,10 @@ const FinishedEvents = () => {
                   <tr
                     key={event.bookingId + idx}
                     style={{ fontSize: "12px" }}
-                    className="fw-semibold text-center"
+                    className="fw-semibold text-center cursor-pointer"
+                    onClick={() => handleRowClick(event)}
                   >
-                    <td>{String(idx + 1).padStart(2, "0")}</td>
+                    <td>{String(event.slNo).padStart(2, "0")}</td>
                     <td>{event.name}</td>
                     <td>{event.bookingId}</td>
                     <td className="d-flex flex-column">
@@ -112,11 +152,8 @@ const FinishedEvents = () => {
                       <small className="text-muted">{event.eventDetails.venue}</small>
                     </td>
                     <td>{event.date}</td>
-                    <td>{event.vendor || "-"}</td>
-                    <td
-                      style={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/booking/booking-details/${event.bookingId}`)}
-                    >
+                    <td>{event.vendor}</td>
+                    <td>
                       <IoChevronForward size={20} className="text-muted" />
                     </td>
                   </tr>

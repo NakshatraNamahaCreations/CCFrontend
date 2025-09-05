@@ -159,7 +159,7 @@ const Services = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=1&limit=10000&search=${encodeURIComponent(search)}`
+        `${API_URL}?search=${encodeURIComponent(search)}`
       );
       const allServices = response.data.data.map((svc) => ({
         serviceName: svc.name,

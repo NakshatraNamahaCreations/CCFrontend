@@ -1,14 +1,10 @@
 import { useState } from "react";
-import Sidebar from "../components/sidebar";
+import Sidebar from "../components/sidebar"; 
 import Header from "./Header";
 
 const Layout = ({ children }) => {
-
-
-
   return (
     <>
-    
       <div className="d-flex hide-scrollbar ">
         <div className="col-md-2">
           <Sidebar />

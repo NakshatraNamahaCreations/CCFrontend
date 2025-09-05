@@ -34,33 +34,33 @@ const FinalQuotationPage = () => {
   const [installments, setInstallments] = useState([]);
   const [error, setError] = useState("");
   const [savedQuotations, setSavedQuotations] = useState([]);
-const [customer, setCustomer] = useState(null);
+  const [customer, setCustomer] = useState(null);
 
   // Get customer data from Redux
   const leadsList = useSelector(selectLeadsList);
-const lead = leadsList.find((lead) => lead._id === id);
+  const lead = leadsList.find((lead) => lead._id === id);
 
 
-useEffect(() => {
-  const fetchCustomer = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/customer/${id}`);
-      const data = await response.json();
-      if (data?.data) {
-        setCustomer(data.data);
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/customer/${id}`);
+        const data = await response.json();
+        if (data?.data) {
+          setCustomer(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch customer via API:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch customer via API:", error);
-    }
-  };
+    };
 
-  // if lead not found from Redux, fetch it
-  if (!lead) {
-    fetchCustomer();
-  } else {
-    setCustomer(lead); // use Redux fallback
-  }
-}, [id, lead]);
+    // if lead not found from Redux, fetch it
+    if (!lead) {
+      fetchCustomer();
+    } else {
+      setCustomer(lead); // use Redux fallback
+    }
+  }, [id, lead]);
 
 
   useEffect(() => {
@@ -79,9 +79,9 @@ useEffect(() => {
 
         if (currentQuotationId && savedQuotes.length > 0) {
           // If there's a selected quotation, use that one
-      const selectedQuotation = savedQuotes.find(
-  (q) => q.id === currentQuotationId || q._id === currentQuotationId || q.quoteId === currentQuotationId
-);
+          const selectedQuotation = savedQuotes.find(
+            (q) => q.id === currentQuotationId || q._id === currentQuotationId || q.quoteId === currentQuotationId
+          );
 
 
           if (selectedQuotation) {
@@ -188,9 +188,8 @@ useEffect(() => {
 
     message += `*Package Details:*\n`;
     packages.forEach((pkg, index) => {
-      message += `\n${index + 1}. *${
-        pkg.packageName
-      }* - ₹${pkg.totalAmount.toLocaleString()}\n`;
+      message += `\n${index + 1}. *${pkg.packageName
+        }* - ₹${pkg.totalAmount.toLocaleString()}\n`;
       message += `   Date: ${pkg.date}, Time: ${pkg.timeSlot}\n`;
       message += `   Services: ${pkg.services
         .map((s) => s.serviceName)
@@ -201,9 +200,8 @@ useEffect(() => {
 
     message += `*Payment Plan:*\n`;
     installments.forEach((inst, index) => {
-      message += `${inst.name}: ${
-        inst.percentage
-      }% (₹${inst.amount.toLocaleString()})\n`;
+      message += `${inst.name}: ${inst.percentage
+        }% (₹${inst.amount.toLocaleString()})\n`;
     });
 
     message += `\nThank you for choosing Classy Captures!`;
@@ -220,13 +218,13 @@ useEffect(() => {
 
 
   const formatDate = (dateStr) => {
-  if (!dateStr) return "N/A";
-  const date = new Date(dateStr);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   const handlePrint = () => {
     window.print();
@@ -395,16 +393,16 @@ useEffect(() => {
             </Col>
             <Col md={6} className="text-md-end">
               <h6 className="fw-bold mb-3">EVENT DETAILS</h6>
-        <p className="mb-1">
-  <strong>Event Type:</strong>{" "}
-  {Array.isArray(customer?.category)
-    ? customer.category.map((cat) => cat.name).join(", ")
-    : customer?.category || "N/A"}
-</p>
+              <p className="mb-1">
+                <strong>Event Type:</strong>{" "}
+                {Array.isArray(customer?.category)
+                  ? customer.category.map((cat) => cat.name).join(", ")
+                  : customer?.category || "N/A"}
+              </p>
 
 
               <p className="mb-1">
-                  <strong>Start Date:</strong> {formatDate(customer?.eventStartDate)}
+                <strong>Start Date:</strong> {formatDate(customer?.eventStartDate)}
               </p>
               <p className="mb-1">
                 <strong>End Date:</strong> {formatDate(customer?.eventEndDate)}
@@ -422,8 +420,8 @@ useEffect(() => {
                 {quotation?.name || "Standard Package"}
               </p>
               <p className="mb-1">
-               
-                  <strong>Quotation Date:</strong> {formatDate(quotation?.date || new Date())}
+
+                <strong>Quotation Date:</strong> {formatDate(quotation?.date || new Date())}
               </p>
             </Col>
             <Col md={6} className="text-md-end">
@@ -523,21 +521,21 @@ useEffect(() => {
             </div>
             <div className="mb-0 d-flex justify-content-between">
               <h5>Discount:</h5>
-            <h5>- ₹ {quotation?.discountValue?.toLocaleString() || "0"}</h5>
+              <h5>- ₹ {quotation?.discountValue?.toLocaleString() || "0"}</h5>
             </div>
             <div className="mb-0 d-flex justify-content-between">
-            <h5 className="mb-0" style={{ fontSize: "18px" }}>
-                        GST{" "}
-                        <span className="" style={{ fontSize: "16px" }}>
-                          5%
-                        </span>
-                      </h5>
- <h5>₹ {quotation?.gstValue?.toLocaleString() || "0"}</h5>
+              <h5 className="mb-0" style={{ fontSize: "18px" }}>
+                GST{" "}
+                <span className="" style={{ fontSize: "16px" }}>
+                  5%
+                </span>
+              </h5>
+              <h5>₹ {quotation?.gstValue?.toLocaleString() || "0"}</h5>
             </div>
             <hr />
             <div className="mb-0 text-success d-flex justify-content-between">
               <h5>Grand Total:</h5>
-               <h5>₹ {quotation?.totalAfterDiscount?.toLocaleString() || "0"}</h5>
+              <h5>₹ {quotation?.totalAfterDiscount?.toLocaleString() || "0"}</h5>
             </div>
           </div>
         </div>
@@ -577,12 +575,12 @@ useEffect(() => {
                 <td colSpan="2" className="text-end">
                   Total:
                 </td>
-             <td>
-          {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
-        </td>
-        <td colSpan="2">
-          ₹{quotation?.totalAfterDiscount?.toLocaleString() || "0"}
-        </td>
+                <td>
+                  {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
+                </td>
+                <td colSpan="2">
+                  ₹{quotation?.totalAfterDiscount?.toLocaleString() || "0"}
+                </td>
               </tr>
             </tbody>
           </Table>
@@ -644,20 +642,20 @@ useEffect(() => {
         >
           <FaEdit className="me-2" /> Modify Quotation
         </Button>
-      {quotation?.isFinalized && (
-<Button
-  variant="success"
-  className="px-4"
-  onClick={() => {
-navigate(`/payment/installment-details/${quotationIdForNavigation}`);
-  }}
-  disabled={!quotation?.isFinalized}
->
-  Confirm Booking
-</Button>
+        {quotation?.isFinalized && (
+          <Button
+            variant="success"
+            className="px-4"
+            onClick={() => {
+              navigate(`/payment/installment-details/${quotationIdForNavigation}`);
+            }}
+            disabled={!quotation?.isFinalized}
+          >
+            Confirm Booking
+          </Button>
 
 
-)}
+        )}
 
       </div>
     </div>

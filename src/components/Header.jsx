@@ -10,13 +10,9 @@ const Header = () => {
   const userCardRef = useRef(null);
   const navigate = useNavigate();
 
-
-
-  
-
-    // New: state for user info
+  // New: state for user info
   const [user, setUser] = useState({ name: "", email: "", profileImage: "" });
-    useEffect(() => {
+  useEffect(() => {
     // Load user data from localStorage on mount
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -31,7 +27,7 @@ const Header = () => {
     }
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (userCardRef.current && !userCardRef.current.contains(event.target)) {
         setShowUserCard(false);
@@ -124,11 +120,31 @@ const Header = () => {
     else if (matchPath("/payment/installment-details/:id", path)) {
       setCurrentTab("Installment Details");
     }
+    else if (matchPath("/payment/installment-details/:id", path)) {
+      setCurrentTab("Installment Details");
+    }
     else if (matchPath("/settings", path)) {
       setCurrentTab("Settings");
-    } else if (matchPath("/profile", path)) {
+    } 
+    else if (matchPath("/profile", path)) {
       setCurrentTab("Profile");
-    } else {
+    } 
+    else if (matchPath("/follow-ups/calendar", path)) {
+      setCurrentTab("Payment Follow-Up Calendar");
+    }
+    else if (matchPath("/follow-ups/date/:date", path)) {
+      setCurrentTab("Payment Follow-Up list");
+    }
+    else if (matchPath("/daily-Task", path)) {
+      setCurrentTab("Daily Task");
+    }
+    else if (matchPath("/daily-task/list", path)) {
+      setCurrentTab("Daily Task List");
+    }
+    else if (matchPath("/booking/by-query/:queryId", path)) {
+      setCurrentTab("Booking Details");
+    }
+    else {
       setCurrentTab("Dashboard");
     }
   }, [location.pathname]);
@@ -141,14 +157,14 @@ const Header = () => {
     }
   };
 
-   const handleLogout = () => {
+  const handleLogout = () => {
     // Clear user data & token from localStorage
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     localStorage.removeItem("isLoggedIn");
 
     setShowUserCard(false);
-window.location.reload();
+    window.location.reload();
     // Redirect to login page
     navigate("/", { replace: true });
   };
@@ -174,12 +190,12 @@ window.location.reload();
           <Card
             ref={userCardRef}
             className="shadow border-0 position-absolute top-100  mt-2"
-            style={{ width: "200px", zIndex: 1000, right: "0px" }}
+            style={{ width: "200px", zIndex: 10000, right: "0px" }}
           >
-        <Card.Body>
+            <Card.Body>
               <div className="text-center mb-3">
                 <img
-                  src={user.profileImage}
+                  src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png"
                   alt="user"
                   className="rounded-circle mb-2"
                   style={{ width: "50px", height: "50px", objectFit: "cover" }}
@@ -189,7 +205,7 @@ window.location.reload();
               </div>
 
               <div className="d-grid gap-2">
-                <Button
+                {/* <Button
                   variant="outline-dark"
                   className="d-flex align-items-center justify-content-center gap-2"
                   onClick={() => {
@@ -198,7 +214,7 @@ window.location.reload();
                   }}
                 >
                   <FaUser /> Profile
-                </Button>
+                </Button> */}
                 <Button
                   variant="outline-danger"
                   className="d-flex align-items-center justify-content-center gap-2"

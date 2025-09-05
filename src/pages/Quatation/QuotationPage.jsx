@@ -77,10 +77,7 @@ const QuotationPage = () => {
               <Button variant="outline-secondary" size="sm" onClick={handleClearSearch}>Clear</Button>
             )}
           </Form>
-          <div className="d-flex gap-2">
-            <img src={sortIcon} alt="sortIcon" style={{ width: "25px", cursor: "pointer" }} />
-            <img src={filterIcon} alt="filterIcon" style={{ width: "25px", cursor: "pointer" }} />
-          </div>
+         
         </div>
 
         <Container className="position-relative mt-4">

@@ -50,6 +50,13 @@ import FinalizedQuotation from "./pages/Customer/FInalizedQuotation.jsx";
 import EventServicesTable from "./pages/Postproduction/EventServicesTable.jsx";
 import AssignedTaskList from "./pages/Postproduction/AssignedTaskList.jsx";
 import AssignmentDetails from "./pages/Postproduction/AssignmentDetails.jsx";
+import PaymentDetials from "./pages/Payment/PaymentDetials.jsx";
+import DailyTaskCalendar from "./pages/DailyTask/DailyTaskCalendar.jsx";
+import DailyTasksTable from "./pages/DailyTask/DailyTasksTable.jsx";
+import FollowUpCalendar from "./pages/FollowUp/FollowUpCalendar.jsx";
+import PaymentFollowUpsByDate from "./pages/FollowUp/PaymentFollowUpsByDate.jsx";
+import CallFollowUpsByDate from "./pages/FollowUp/CallFollowUpsByDate.jsx";
+import BookedQuotationsByQuery from "./pages/Booking/BookedQuotationsByQuery.jsx";
 
 function App() {
   const isLoggedIn = localStorage.getItem("isLoggedIn");
@@ -160,6 +167,10 @@ function App() {
                   path="/payment/installment-details/:quotationId"
                   element={<InstallmentDetails />}
                 />
+                <Route
+                  path="/payment/payment-details/:quotationId"
+                  element={<PaymentDetials />}
+                />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route
@@ -187,6 +198,27 @@ function App() {
                 <Route
                   path="/assignment-details/:assignmentId"
                   element={<AssignmentDetails />}
+                />
+                <Route
+                  path="/daily-task"
+                  element={<DailyTaskCalendar />}
+                />
+                <Route
+                  path="/daily-task/list"
+                  element={<DailyTasksTable />}
+                />
+                <Route path="/follow-ups/calendar" element={<FollowUpCalendar />} />
+                <Route
+                  path="/follow-ups/call-later"
+                  element={<CallFollowUpsByDate />}
+                />
+                <Route
+                  path="/follow-ups/date/:date"
+                  element={<PaymentFollowUpsByDate />}
+                />
+                <Route
+                  path="/booking/by-query/:queryId"
+                  element={<BookedQuotationsByQuery />}
                 />
               </Routes>
             </Layout>
