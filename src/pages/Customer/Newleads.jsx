@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from "react";
 // import {
 //   Button,
@@ -7,13 +8,15 @@
 //   Form,
 //   InputGroup,
 //   Dropdown,
+//   Spinner,
 // } from "react-bootstrap";
 // import { useNavigate } from "react-router-dom";
 // import axios from "axios";
 // import { toast } from "react-hot-toast";
 // import DynamicPagination from "../DynamicPagination";
-// import { FaDownload } from "react-icons/fa"; // Import download icon
-// import { Spinner } from "react-bootstrap";
+// import { FaDownload } from "react-icons/fa";
+
+// const ITEMS_PER_PAGE = 10;
 
 // const formatDate = (dateString) => {
 //   if (!dateString) return "-";
@@ -22,8 +25,6 @@
 //     date.getMonth() + 1
 //   ).padStart(2, "0")}-${date.getFullYear()}`;
 // };
-
-// const ITEMS_PER_PAGE = 10;
 
 // const Newleads = () => {
 //   const navigate = useNavigate();
@@ -35,6 +36,7 @@
 //   const [search, setSearch] = useState("");
 //   const [searchInput, setSearchInput] = useState("");
 //   const [statusFilter, setStatusFilter] = useState("");
+//   const [eventCategoryFilter, setEventCategoryFilter] = useState("");
 
 //   const fetchQueries = async (page = 1, searchValue = "") => {
 //     setLoading(true);
@@ -42,7 +44,9 @@
 //       const response = await axios.get(
 //         `http://localhost:5000/api/lead/paginated?page=${page}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
 //           searchValue
-//         )}`
+//         )}&status=${encodeURIComponent(
+//           statusFilter
+//         )}&eventCategory=${encodeURIComponent(eventCategoryFilter)}`
 //       );
 //       setQueries(response.data.data || []);
 //       setTotalPages(response.data.totalPages || 1);
@@ -57,12 +61,13 @@
 
 //   useEffect(() => {
 //     fetchQueries(currentPage, search);
-//   }, [currentPage, search]);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [currentPage, search, statusFilter, eventCategoryFilter]);
 
 //   const handleSearch = (e) => {
 //     e.preventDefault();
 //     setCurrentPage(1);
-//     setQueries([])
+//     setQueries([]);
 //     setSearch(searchInput.trim());
 //   };
 
@@ -72,22 +77,13 @@
 //     setCurrentPage(1);
 //   };
 
-//   // Function to download data as CSV
+//   // Download CSV
 //   const downloadCSV = () => {
-//     // Get the data to export (filtered or all)
-//     const dataToExport = statusFilter
-//       ? queries.filter(
-//           ({ query }) =>
-//             query.status?.toLowerCase() === statusFilter.toLowerCase()
-//         )
-//       : queries;
-
-//     if (dataToExport.length === 0) {
+//     if (queries.length === 0) {
 //       toast.error("No data to download");
 //       return;
 //     }
 
-//     // Create CSV headers
 //     const headers = [
 //       "Sl.No",
 //       "Query ID",
@@ -97,11 +93,9 @@
 //       "Events",
 //       "Status",
 //     ];
-
-//     // Create CSV content
 //     let csvContent = headers.join(",") + "\n";
 
-//     dataToExport.forEach((item, index) => {
+//     queries.forEach((item, index) => {
 //       const { leadName, leadPhone, query } = item;
 //       const events =
 //         query.eventDetails
@@ -111,17 +105,15 @@
 //       const row = [
 //         index + 1,
 //         query.queryId || "-",
-//         `"${leadName || "-"}"`, // Wrap in quotes to handle commas in names
+//         `"${leadName || "-"}"`,
 //         leadPhone || "-",
 //         formatDate(query.createdAt),
-//         `"${events}"`, // Wrap in quotes to handle commas
+//         `"${events}"`,
 //         query.status || "-",
 //       ];
-
 //       csvContent += row.join(",") + "\n";
 //     });
 
-//     // Create download link
 //     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 //     const url = URL.createObjectURL(blob);
 //     const link = document.createElement("a");
@@ -138,24 +130,19 @@
 //     toast.success("Data downloaded successfully");
 //   };
 
-//   const filteredQueries = queries.filter(({ query }) =>
-//     statusFilter
-//       ? query.status?.toLowerCase() === statusFilter.toLowerCase()
-//       : true
-//   );
-
 //   return (
 //     <Container className="position-relative">
-//       {/* Search Bar & Filter */}
+//       {/* Search + Filters */}
 //       <div
 //         className="d-flex gap-2 align-items-center justify-content-between p-2 rounded mb-3"
 //         style={{ flexWrap: "wrap", zIndex: 1000000 }}
 //       >
+//         {/* Main search */}
 //         <Form onSubmit={handleSearch} style={{ width: "350px" }}>
 //           <InputGroup>
 //             <Form.Control
 //               type="text"
-//               placeholder="Search by name or phone"
+//               placeholder="Search by name, phone, or query ID"
 //               value={searchInput}
 //               onChange={(e) => setSearchInput(e.target.value)}
 //               style={{ fontSize: "14px" }}
@@ -182,8 +169,9 @@
 //           </InputGroup>
 //         </Form>
 
-//         <div className="d-flex gap-2">
-//           <Dropdown style={{ zIndex: 10000 }}>
+//         <div className="d-flex gap-2 ">
+//           {/* Status Filter */}
+//           <Dropdown className="" style={{zIndex:"99999"}}>
 //             <Dropdown.Toggle variant="outline-dark" size="sm">
 //               {statusFilter || "Filter by Status"}
 //             </Dropdown.Toggle>
@@ -209,12 +197,25 @@
 //             </Dropdown.Menu>
 //           </Dropdown>
 
-//           {/* Download Button */}
+//           {/* Event Category Input */}
+//           <Form.Control
+//             type="text"
+//             placeholder="Filter by Event Category"
+//             value={eventCategoryFilter}
+//             onChange={(e) => {
+//               setEventCategoryFilter(e.target.value);
+//               setCurrentPage(1);
+//             }}
+//             style={{ fontSize: "14px", width: "200px" }}
+//             // disabled={loading}
+//           />
+
+//           {/* Export */}
 //           <Button
 //             variant="success"
 //             size="sm"
 //             onClick={downloadCSV}
-//             disabled={filteredQueries.length === 0}
+//             disabled={queries.length === 0}
 //             className="d-flex align-items-center gap-1"
 //           >
 //             <FaDownload /> Export
@@ -222,9 +223,9 @@
 //         </div>
 //       </div>
 
-//       <Card className="border-0 p-3">
+//       {/* Table */}
+//       <Card className="border-0 p-3 pb-0">
 //         {error && <p className="text-danger">{error}</p>}
-//         {loading && <p>Loading...</p>}
 //         <div
 //           className="table-responsive bg-white"
 //           style={{ maxHeight: "65vh", overflowY: "auto" }}
@@ -241,6 +242,7 @@
 //                 <th style={{ fontSize: "14px" }}>Phone</th>
 //                 <th style={{ fontSize: "14px" }}>Query Created</th>
 //                 <th style={{ fontSize: "14px" }}>Events</th>
+//                 <th style={{ fontSize: "14px" }}>Remarks</th>
 //                 <th style={{ fontSize: "14px" }}>Status</th>
 //                 <th style={{ fontSize: "14px" }}>Action</th>
 //               </tr>
@@ -256,8 +258,8 @@
 //                 </tr>
 //               )}
 
-//               {/* No data found */}
-//               {!loading && filteredQueries.length === 0 && (
+//               {/* No data */}
+//               {!loading && queries.length === 0 && (
 //                 <tr>
 //                   <td colSpan="8" className="text-center">
 //                     No leads found
@@ -267,7 +269,7 @@
 
 //               {/* Data rows */}
 //               {!loading &&
-//                 filteredQueries.map((item, i) => {
+//                 queries.map((item, i) => {
 //                   const { leadName, leadPhone, leadId, query } = item;
 //                   const status = query.status;
 //                   const isBooked = status === "Booked";
@@ -276,7 +278,7 @@
 //                     <tr
 //                       className="text-center fw-semibold"
 //                       style={{ fontSize: "12px" }}
-//                       key={item._id}
+//                       key={query._id}
 //                     >
 //                       <td>
 //                         {String(
@@ -297,6 +299,7 @@
 //                           </div>
 //                         ))}
 //                       </td>
+//                       <td>{query.comment}</td>
 //                       <td>
 //                         {isBooked ? (
 //                           <span
@@ -319,6 +322,7 @@
 //                           ["Created", "Call Later"].includes(status) && (
 //                             <Button
 //                               variant="link"
+//                               size="sm"
 //                               className="text-black fw-bold"
 //                               style={{ fontSize: "14px" }}
 //                               onClick={() =>
@@ -334,8 +338,9 @@
 //                         {!isBooked && status === "Quotation" && (
 //                           <Button
 //                             variant="dark"
+
 //                             className="btn-sm fw-semibold"
-//                             style={{ fontSize: "14px" }}
+//                             style={{ fontSize: "12px" }}
 //                             onClick={() =>
 //                               navigate(
 //                                 `/customer/create-quote/${leadId}/${query._id}`
@@ -357,13 +362,16 @@
 //                 })}
 //             </tbody>
 //           </Table>
+
+//         </div>
+//       </Card>
+      
+//           {/* Pagination */}
 //           <DynamicPagination
 //             currentPage={currentPage}
 //             totalPages={totalPages}
 //             onPageChange={setCurrentPage}
 //           />
-//         </div>
-//       </Card>
 //     </Container>
 //   );
 // };
@@ -408,7 +416,9 @@ const Newleads = () => {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [eventCategoryFilter, setEventCategoryFilter] = useState("");
+  const [eventDate, setEventDate] = useState(""); // 🔹 new
 
+  // Normal fetch
   const fetchQueries = async (page = 1, searchValue = "") => {
     setLoading(true);
     try {
@@ -419,6 +429,7 @@ const Newleads = () => {
           statusFilter
         )}&eventCategory=${encodeURIComponent(eventCategoryFilter)}`
       );
+
       setQueries(response.data.data || []);
       setTotalPages(response.data.totalPages || 1);
       setError("");
@@ -430,10 +441,47 @@ const Newleads = () => {
     }
   };
 
+  // Fetch by event-date
+  const fetchByEventDate = async (date) => {
+    if (!date) return;
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/lead/event-date/${date}`
+      );
+
+      const leads = response.data.leads || [];
+      // 🔹 Flatten leads → queries for table
+      const normalized = leads.flatMap((lead) =>
+        (lead.queries || []).map((q) => ({
+          leadId: lead.leadId,
+          leadName: lead.persons?.[0]?.name || "-",
+          leadPhone: lead.persons?.[0]?.phoneNo || "-",
+          query: q,
+        }))
+      );
+
+      setQueries(normalized);
+      setTotalPages(1);
+      setCurrentPage(1);
+      setError("");
+    } catch (err) {
+      setError("Failed to fetch by event date");
+      toast.error("Failed to fetch by event date");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Watchers
   useEffect(() => {
-    fetchQueries(currentPage, search);
+    if (eventDate) {
+      fetchByEventDate(eventDate);
+    } else {
+      fetchQueries(currentPage, search);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, search, statusFilter, eventCategoryFilter]);
+  }, [currentPage, search, statusFilter, eventCategoryFilter, eventDate]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -448,7 +496,7 @@ const Newleads = () => {
     setCurrentPage(1);
   };
 
-  // Download CSV
+  // CSV Export
   const downloadCSV = () => {
     if (queries.length === 0) {
       toast.error("No data to download");
@@ -508,7 +556,7 @@ const Newleads = () => {
         className="d-flex gap-2 align-items-center justify-content-between p-2 rounded mb-3"
         style={{ flexWrap: "wrap", zIndex: 1000000 }}
       >
-        {/* Main search */}
+        {/* Search */}
         <Form onSubmit={handleSearch} style={{ width: "350px" }}>
           <InputGroup>
             <Form.Control
@@ -542,33 +590,23 @@ const Newleads = () => {
 
         <div className="d-flex gap-2 ">
           {/* Status Filter */}
-          <Dropdown className="" style={{zIndex:"99999"}}>
+          <Dropdown style={{ zIndex: "99999" }}>
             <Dropdown.Toggle variant="outline-dark" size="sm">
               {statusFilter || "Filter by Status"}
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              <Dropdown.Item onClick={() => setStatusFilter("")}>
-                All
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setStatusFilter("Created")}>
-                Created
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setStatusFilter("Call Later")}>
-                Call Later
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setStatusFilter("Quotation")}>
-                Quotation
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setStatusFilter("Booked")}>
-                Booked
-              </Dropdown.Item>
+              <Dropdown.Item onClick={() => setStatusFilter("")}>All</Dropdown.Item>
+              <Dropdown.Item onClick={() => setStatusFilter("Created")}>Created</Dropdown.Item>
+              <Dropdown.Item onClick={() => setStatusFilter("Call Later")}>Call Later</Dropdown.Item>
+              <Dropdown.Item onClick={() => setStatusFilter("Quotation")}>Quotation</Dropdown.Item>
+              <Dropdown.Item onClick={() => setStatusFilter("Booked")}>Booked</Dropdown.Item>
               <Dropdown.Item onClick={() => setStatusFilter("Not Interested")}>
                 Not Interested
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
 
-          {/* Event Category Input */}
+          {/* Event Category Filter */}
           <Form.Control
             type="text"
             placeholder="Filter by Event Category"
@@ -578,8 +616,27 @@ const Newleads = () => {
               setCurrentPage(1);
             }}
             style={{ fontSize: "14px", width: "200px" }}
-            // disabled={loading}
           />
+
+          {/* 🔹 Event Date Filter */}
+          <Form.Control
+            type="date"
+            value={eventDate}
+            onChange={(e) => {
+              setEventDate(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{ fontSize: "14px", width: "200px" }}
+          />
+          {eventDate && (
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setEventDate("")}
+            >
+              Clear Date
+            </Button>
+          )}
 
           {/* Export */}
           <Button
@@ -619,26 +676,21 @@ const Newleads = () => {
               </tr>
             </thead>
             <tbody>
-              {/* Loader row */}
               {loading && (
                 <tr>
-                  <td colSpan="8" className="text-center py-5">
+                  <td colSpan="9" className="text-center py-5">
                     <Spinner animation="border" role="status" size="sm" />
                     <span className="ms-2">Loading...</span>
                   </td>
                 </tr>
               )}
-
-              {/* No data */}
               {!loading && queries.length === 0 && (
                 <tr>
-                  <td colSpan="8" className="text-center">
+                  <td colSpan="9" className="text-center">
                     No leads found
                   </td>
                 </tr>
               )}
-
-              {/* Data rows */}
               {!loading &&
                 queries.map((item, i) => {
                   const { leadName, leadPhone, leadId, query } = item;
@@ -709,7 +761,6 @@ const Newleads = () => {
                         {!isBooked && status === "Quotation" && (
                           <Button
                             variant="dark"
-
                             className="btn-sm fw-semibold"
                             style={{ fontSize: "12px" }}
                             onClick={() =>
@@ -733,16 +784,17 @@ const Newleads = () => {
                 })}
             </tbody>
           </Table>
-
         </div>
       </Card>
-      
-          {/* Pagination */}
-          <DynamicPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+
+      {/* Pagination (disabled when date filter applied) */}
+      {!eventDate && (
+        <DynamicPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </Container>
   );
 };

@@ -26,7 +26,6 @@ import LocalAlbumsTable from "../Albums/LocalAlbumsTable";
 import LocalAlbumDetailsModal from "../Albums/LocalAlbumDetailsModal";
 import { computeAlbumTotal } from "../../utils/albumUtils"; // you already use this elsewhere
 
-
 // Utility function to format date as DD-MM-YYYY
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
@@ -36,6 +35,58 @@ const formatDate = (dateStr) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
+};
+
+const NotesModal = ({ show, note, onHide, onSave, title = "Add Notes" }) => {
+  const [noteInp, setNoteInp] = useState("");
+
+  // Sync note when modal opens or note prop changes
+  useEffect(() => {
+    if (show) {
+      setNoteInp(note || "");
+    }
+  }, [note, show]);
+
+  const handleSave = () => {
+    onSave(noteInp.trim());
+    onHide();
+  };
+
+  const handleClose = () => {
+    // Restore original note instead of clearing
+    setNoteInp(note || "");
+    onHide();
+  };
+
+  return (
+    <Modal show={show} onHide={handleClose} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>{title}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form>
+          <Form.Group className="mb-3">
+            <Form.Label>Notes/Comments</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              value={noteInp}
+              onChange={(e) => setNoteInp(e.target.value)}
+              placeholder="Enter your notes or comments here..."
+            />
+          </Form.Group>
+        </Form>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>
+          Cancel
+        </Button>
+        <Button variant="dark" onClick={handleSave} disabled={!noteInp.trim()}>
+          Save Note
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
 };
 
 const CreateQuote = () => {
@@ -105,23 +156,46 @@ const CreateQuote = () => {
   const [showAlbumDetails, setShowAlbumDetails] = useState(false);
   const [albumDetailsIndex, setAlbumDetailsIndex] = useState(null);
 
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [note, setNote] = useState("");
+
+  // Derived flag: a "free" quote (100% discount or computed total is 0)
+  const isZeroTotal = React.useMemo(
+    () =>
+      Math.round(Number(grandTotal || 0)) === 0 || Number(discountPer) >= 100,
+    [grandTotal, discountPer]
+  );
+
   const albumSubtotal = useMemo(
     () => albums.reduce((s, a) => s + (computeAlbumTotal(a) || 0), 0),
     [albums]
   );
 
-
   // open/close + callbacks
-  const openAddAlbumModal = () => { setAlbumModalMode("add"); setAlbumEditIndex(null); setShowAlbumModal(true); };
-  const openEditAlbumModal = (idx) => { setAlbumModalMode("edit"); setAlbumEditIndex(idx); setShowAlbumModal(true); };
+  const openAddAlbumModal = () => {
+    setAlbumModalMode("add");
+    setAlbumEditIndex(null);
+    setShowAlbumModal(true);
+  };
+  const openEditAlbumModal = (idx) => {
+    setAlbumModalMode("edit");
+    setAlbumEditIndex(idx);
+    setShowAlbumModal(true);
+  };
   const closeAlbumModal = () => setShowAlbumModal(false);
 
-  const openAlbumDetails = (idx) => { setAlbumDetailsIndex(idx); setShowAlbumDetails(true); };
-  const closeAlbumDetails = () => { setShowAlbumDetails(false); setAlbumDetailsIndex(null); };
-
+  const openAlbumDetails = (idx) => {
+    setAlbumDetailsIndex(idx);
+    setShowAlbumDetails(true);
+  };
+  const closeAlbumDetails = () => {
+    setShowAlbumDetails(false);
+    setAlbumDetailsIndex(null);
+  };
 
   const handleAlbumAdd = (albumObj) => setAlbums((p) => [...p, albumObj]);
-  const handleAlbumUpdate = (albumObj, idx) => setAlbums((p) => p.map((a, i) => (i === idx ? albumObj : a)));
+  const handleAlbumUpdate = (albumObj, idx) =>
+    setAlbums((p) => p.map((a, i) => (i === idx ? albumObj : a)));
   const handleAlbumRemove = (index) => {
     const ok = window.confirm("Are you sure you want to remove this album?");
     if (!ok) return;
@@ -138,9 +212,9 @@ const CreateQuote = () => {
     0
   );
 
-  // Auto-generate installments when packages are added and installments is empty
+  // Auto-generate installments only when there is a non-zero total
   useEffect(() => {
-    if (packages.length > 0 && installments.length === 0) {
+    if (packages.length > 0 && installments.length === 0 && !isZeroTotal) {
       const defaultPercents = [50, 30, 20];
       const defaultInsts = defaultPercents.map((perc, idx) => ({
         id: `${Date.now()}-${idx}`,
@@ -150,7 +224,7 @@ const CreateQuote = () => {
       }));
       setInstallments(defaultInsts);
     }
-  }, [packages, grandTotal]);
+  }, [packages, grandTotal, isZeroTotal]);
 
   // Recalculate amounts when grand total changes
   useEffect(() => {
@@ -161,6 +235,13 @@ const CreateQuote = () => {
       }))
     );
   }, [grandTotal]);
+
+  // If quote becomes free, drop any existing installments
+  useEffect(() => {
+    if (isZeroTotal && installments.length > 0) {
+      setInstallments([]);
+    }
+  }, [isZeroTotal]);
 
   // Add or update installment
   const handleSaveInstallment = () => {
@@ -175,11 +256,11 @@ const CreateQuote = () => {
         insts.map((inst, idx) =>
           idx === editingInstallmentIndex
             ? {
-              ...inst,
-              name: newInstallmentName,
-              percentage: perc,
-              amount: Math.round((perc / 100) * grandTotal),
-            }
+                ...inst,
+                name: newInstallmentName,
+                percentage: perc,
+                amount: Math.round((perc / 100) * grandTotal),
+              }
             : inst
         )
       );
@@ -399,9 +480,10 @@ const CreateQuote = () => {
           setMarginAfterDiscount(selectedQuotation.marginAfterDiscount ?? 0);
           setMarginGstValue(selectedQuotation.marginGstValue ?? 0);
           setTotalMarginFinal(selectedQuotation.totalMarginFinal ?? 0);
+          setNote(selectedQuotation.quoteNote || "");
           // setQuoteTitle(selectedQuotation.quoteTitle || "");
           // setQuoteDescription(selectedQuotation.quoteDescription || "");
-          setAlbums(selectedQuotation.albums || []);     // <<< hydrate albums
+          setAlbums(selectedQuotation.albums || []); // <<< hydrate albums
         }
       } else {
         setCurrentQuotationId(null); // Do not select any quotation by default
@@ -425,7 +507,7 @@ const CreateQuote = () => {
       setInstallments([]);
       setQuoteTitle("");
       setQuoteDescription("");
-      setDiscountPer(0);
+      setNote(""), setDiscountPer(0);
       setIsGstApplied(false);
       setGstValue(0);
       setDiscountValue(0);
@@ -433,7 +515,7 @@ const CreateQuote = () => {
       setMarginAfterDiscount(0);
       setMarginGstValue(0);
       setTotalMarginFinal(0);
-      setAlbums([])
+      setAlbums([]);
       toast.info("No quotation selected. You can now create a new quotation.");
       return;
     }
@@ -464,6 +546,7 @@ const CreateQuote = () => {
       setQuoteDescription(quotation.quoteDescription || "");
       setDiscountPer(quotation.discountPercent ?? 0);
       setIsGstApplied(!!quotation.gstApplied);
+      setNote(quotation.quoteNote || "");
       setAlbums(quotation.albums || []);
       toast.success(`"${quotation.quoteTitle}" selected`);
     }
@@ -700,12 +783,12 @@ const CreateQuote = () => {
           );
           return found
             ? {
-              ...s,
-              checked: true,
-              qty: found.qty,
-              price: found.price,
-              marginPrice: found.marginPrice,
-            }
+                ...s,
+                checked: true,
+                qty: found.qty,
+                price: found.price,
+                marginPrice: found.marginPrice,
+              }
             : { ...s, checked: false, qty: 1 };
         })
       );
@@ -792,15 +875,27 @@ const CreateQuote = () => {
   };
 
   // In the Installment Modal, calculate availablePercentage
-  const availablePercentage =
+  // const availablePercentage =
+  //   editingInstallmentIndex !== null
+  //     ? 100 -
+  //       installments.reduce(
+  //         (sum, inst, idx) =>
+  //           idx !== editingInstallmentIndex ? sum + inst.percentage : sum,
+  //         0
+  //       )
+  //     : 100 - installments.reduce((sum, inst) => sum + inst.percentage, 0);
+
+  const baseAvail =
     editingInstallmentIndex !== null
       ? 100 -
-      installments.reduce(
-        (sum, inst, idx) =>
-          idx !== editingInstallmentIndex ? sum + inst.percentage : sum,
-        0
-      )
+        installments.reduce(
+          (sum, inst, idx) =>
+            idx !== editingInstallmentIndex ? sum + inst.percentage : sum,
+          0
+        )
       : 100 - installments.reduce((sum, inst) => sum + inst.percentage, 0);
+
+  const availablePercentage = isZeroTotal ? 0 : baseAvail;
 
   // Add or update installment
   const handleAddInstallment = () => {
@@ -821,11 +916,11 @@ const CreateQuote = () => {
         insts.map((inst, idx) =>
           idx === editingInstallmentIndex
             ? {
-              ...inst,
-              name: newInstallmentName,
-              percentage: percentage,
-              amount: Math.round((percentage / 100) * grandTotal),
-            }
+                ...inst,
+                name: newInstallmentName,
+                percentage: percentage,
+                amount: Math.round((percentage / 100) * grandTotal),
+              }
             : inst
         )
       );
@@ -861,6 +956,7 @@ const CreateQuote = () => {
           queryId: queryId,
           quoteTitle,
           quoteDescription,
+          quoteNote: note,
           packages: packages.map((pkg) => ({
             categoryName: pkg.category,
             packageType: pkg.type === "preset" ? "Preset" : "Custom",
@@ -877,13 +973,16 @@ const CreateQuote = () => {
               qty: Number(s.qty),
             })),
           })),
-          installments: installments.map((inst, idx) => ({
-            installmentNumber: idx + 1,
-            dueDate: inst.dueDate || "",
-            paymentMode: inst.paymentMode || "",
-            paymentAmount: inst.amount,
-            paymentPercentage: inst.percentage,
-          })),
+          installments: isZeroTotal
+            ? [] // do not store installments for zero total / 100% discount
+            : installments.map((inst, idx) => ({
+                installmentNumber: idx + 1,
+                dueDate: inst.dueDate || "",
+                paymentMode: inst.paymentMode || "",
+                paymentAmount: inst.amount,
+                paymentPercentage: inst.percentage,
+              })),
+
           totalPackageAmt: totalPackageAmount,
           totalAmount: grandTotal,
           discountPercent: discountPer,
@@ -896,7 +995,7 @@ const CreateQuote = () => {
           marginGstValue,
           totalMarginFinal,
           finalized: false,
-          albums,                        // <--- include albums array
+          albums, // <--- include albums array
           totalAlbumAmount: albumSubtotal,
         }
       );
@@ -940,6 +1039,7 @@ const CreateQuote = () => {
           queryId: queryId,
           quoteTitle,
           quoteDescription,
+          quoteNote: note,
           packages: packages.map((pkg) => ({
             categoryName: pkg.category,
             packageType: pkg.type === "preset" ? "Preset" : "Custom",
@@ -956,13 +1056,16 @@ const CreateQuote = () => {
               qty: Number(s.qty),
             })),
           })),
-          installments: installments.map((inst, idx) => ({
-            installmentNumber: idx + 1,
-            dueDate: inst.dueDate || "",
-            paymentMode: inst.paymentMode || "",
-            paymentAmount: inst.amount,
-            paymentPercentage: inst.percentage,
-          })),
+          installments: isZeroTotal
+            ? [] // do not store installments for zero total / 100% discount
+            : installments.map((inst, idx) => ({
+                installmentNumber: idx + 1,
+                dueDate: inst.dueDate || "",
+                paymentMode: inst.paymentMode || "",
+                paymentAmount: inst.amount,
+                paymentPercentage: inst.percentage,
+              })),
+
           totalPackageAmt: totalPackageAmount,
           totalAmount: grandTotal,
           discountPercent: discountPer,
@@ -975,7 +1078,7 @@ const CreateQuote = () => {
           marginGstValue,
           totalMarginFinal,
           finalized: false,
-          albums,                        // <--- include albums array
+          albums, // <--- include albums array
           totalAlbumAmount: albumSubtotal,
         }
       );
@@ -1031,6 +1134,15 @@ const CreateQuote = () => {
     }
   };
 
+  const handleSaveNotes = (noteInp) => {
+    setNote(noteInp);
+
+    // Here you can make an API call to save the notes
+    // For example: await axios.post('/api/notes', { notes });
+  };
+
+  // console.log("note:", note)
+
   return (
     <div
       className="container mt-4 mb-5"
@@ -1052,10 +1164,11 @@ const CreateQuote = () => {
             <div className="d-flex align-items-center gap-2">
               {leadDetails?.queryDetails?.status && (
                 <span
-                  className={`badge bg-${leadDetails.queryDetails.status === "Call Later"
-                    ? "warning"
-                    : "success"
-                    } text-dark`}
+                  className={`badge bg-${
+                    leadDetails.queryDetails.status === "Call Later"
+                      ? "warning"
+                      : "success"
+                  } text-dark`}
                   style={{ fontSize: "13px" }}
                 >
                   {leadDetails.queryDetails.status}
@@ -1063,12 +1176,12 @@ const CreateQuote = () => {
               )}
               {leadDetails?.leadId && (
                 <Button
-                  variant="outline-secondary"
+                  variant="outline-dark"
                   size="sm"
                   className="ms-2 d-flex align-items-center"
                   style={{
                     border: "none",
-                    background: "transparent",
+                    // background: "transparent",
                     boxShadow: "none",
                   }}
                   title="Edit Lead"
@@ -1079,6 +1192,12 @@ const CreateQuote = () => {
                   <FaEdit style={{ fontSize: "18px" }} />
                 </Button>
               )}
+              <Button
+                variant="outline-dark"
+                onClick={() => setShowNotesModal(true)}
+              >
+                {note ? "Edit Note" : " Add Note"}
+              </Button>
             </div>
           </div>
           {leadDetails ? (
@@ -1104,6 +1223,11 @@ const CreateQuote = () => {
                   <div>
                     <strong>Query ID:</strong>{" "}
                     <span>{leadDetails.queryDetails?.queryId || "N/A"}</span>
+                  </div>
+                </Col>
+                <Col md={4} className="mb-2">
+                  <div>
+                    <strong>Note:</strong> <span>{note || "N/A"}</span>
                   </div>
                 </Col>
               </Row>
@@ -1163,7 +1287,7 @@ const CreateQuote = () => {
                   Event Details
                 </p>
                 {leadDetails.queryDetails?.eventDetails &&
-                  leadDetails.queryDetails.eventDetails.length > 0 ? (
+                leadDetails.queryDetails.eventDetails.length > 0 ? (
                   <Table bordered size="sm" className="mb-0 bg-white">
                     <thead className="table-light">
                       <tr>
@@ -1242,9 +1366,10 @@ const CreateQuote = () => {
                     <tr
                       key={quotation._id}
                       className={`${quotation.finalized ? " fw-bold" : ""}
-                        ${quotation._id === currentQuotationId
-                          ? "table-primary"
-                          : ""
+                        ${
+                          quotation._id === currentQuotationId
+                            ? "table-primary"
+                            : ""
                         }`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1270,7 +1395,7 @@ const CreateQuote = () => {
                       <td>{formatDate(quotation.createdAt)}</td>
                       <td>
                         {quotation.totalAmount !== undefined &&
-                          quotation.totalAmount !== null
+                        quotation.totalAmount !== null
                           ? `₹${quotation.totalAmount.toLocaleString()}`
                           : "-"}
                       </td>
@@ -1327,7 +1452,6 @@ const CreateQuote = () => {
             </>
           ) : null}
         </Card>
-
         {/* Custom Package Modal */}
         <Modal
           show={showCustomModal}
@@ -1508,7 +1632,7 @@ const CreateQuote = () => {
                           (sum, s) =>
                             sum +
                             (parseFloat(s.marginPrice) || 0) *
-                            (parseInt(s.qty) || 1),
+                              (parseInt(s.qty) || 1),
                           0
                         )
                         .toLocaleString()}
@@ -1530,7 +1654,6 @@ const CreateQuote = () => {
             </Button>
           </Modal.Footer>
         </Modal>
-
         {/* Preset Package Modal */}
         <Modal
           show={showPresetModal}
@@ -1674,7 +1797,7 @@ const CreateQuote = () => {
                           (sum, s) =>
                             sum +
                             (parseFloat(s.marginPrice) || 0) *
-                            (parseInt(s.qty) || 1),
+                              (parseInt(s.qty) || 1),
                           0
                         )
                         .toLocaleString()}
@@ -1696,7 +1819,6 @@ const CreateQuote = () => {
             </Button>
           </Modal.Footer>
         </Modal>
-
         {/* Packages Table */}
         <Card className="p-3 mb-3 border-0 " style={{ background: "#F4F4F4" }}>
           <div className="d-flex justify-content-between align-items-center">
@@ -1893,7 +2015,10 @@ const CreateQuote = () => {
                 );
               })}
 
-              <Card className="p-3 mb-3 border-0 shadow-sm w-100" style={{ background: "#F4F4F4" }}>
+              <Card
+                className="p-3 mb-3 border-0 shadow-sm w-100"
+                style={{ background: "#F4F4F4" }}
+              >
                 <div className="d-flex justify-content-between align-items-center">
                   <h4 style={{ fontSize: "18px", marginBottom: 0 }}>Albums</h4>
                   <Button
@@ -1918,7 +2043,9 @@ const CreateQuote = () => {
                 show={showAlbumModal}
                 onClose={closeAlbumModal}
                 mode={albumModalMode}
-                initialData={albumModalMode === "edit" ? albums[albumEditIndex] : null}
+                initialData={
+                  albumModalMode === "edit" ? albums[albumEditIndex] : null
+                }
                 editIndex={albumEditIndex}
                 onAdd={handleAlbumAdd}
                 onUpdate={handleAlbumUpdate}
@@ -1927,14 +2054,18 @@ const CreateQuote = () => {
               <LocalAlbumDetailsModal
                 show={showAlbumDetails}
                 onClose={closeAlbumDetails}
-                album={albumDetailsIndex != null ? albums[albumDetailsIndex] : null}
+                album={
+                  albumDetailsIndex != null ? albums[albumDetailsIndex] : null
+                }
               />
 
               <Card className="mb-4 shadow-sm w-100">
                 <div className="p-4">
                   <div className="d-flex justify-content-between">
                     <p className="fw-bold">Total Package Amount</p>
-                    <p className="fw-bold">₹{totalPackageAmount.toLocaleString()}</p>
+                    <p className="fw-bold">
+                      ₹{totalPackageAmount.toLocaleString()}
+                    </p>
                   </div>
 
                   <div className="d-flex justify-content-between">
@@ -1946,18 +2077,22 @@ const CreateQuote = () => {
 
                   <div className="d-flex justify-content-between">
                     <p className="fw-bold">Total Before Discount</p>
-                    <p className="fw-bold">₹{totalBeforeDiscount.toLocaleString()}</p>
+                    <p className="fw-bold">
+                      ₹{totalBeforeDiscount.toLocaleString()}
+                    </p>
                   </div>
 
-                  {totalPackageAmount != 0 && <div className="d-flex justify-content-between">
-                    <p className="fw-bold">Total Margin Amount</p>
-                    <p className="fw-bold">
-                      ₹
-                      {typeof totalMarginFinal === "number"
-                        ? totalMarginFinal.toLocaleString()
-                        : "-"}
-                    </p>
-                  </div>}
+                  {totalPackageAmount != 0 && (
+                    <div className="d-flex justify-content-between">
+                      <p className="fw-bold">Total Margin Amount</p>
+                      <p className="fw-bold">
+                        ₹
+                        {typeof totalMarginFinal === "number"
+                          ? totalMarginFinal.toLocaleString()
+                          : "-"}
+                      </p>
+                    </div>
+                  )}
 
                   <hr />
 
@@ -1994,7 +2129,9 @@ const CreateQuote = () => {
 
                     {discountValue !== 0 && (
                       <div className="d-flex justify-content-end">
-                        <p className="text-danger">- ₹{discountValue.toLocaleString()}</p>
+                        <p className="text-danger">
+                          - ₹{discountValue.toLocaleString()}
+                        </p>
                       </div>
                     )}
 
@@ -2013,7 +2150,6 @@ const CreateQuote = () => {
                       </div>
                       <p className="mb-0">₹{gstValue.toLocaleString()}</p>
                     </div>
-
                   </div>
 
                   <hr />
@@ -2021,33 +2157,38 @@ const CreateQuote = () => {
                   {/* Grand Total now uses grandTotal */}
                   <div className="d-flex justify-content-between text-success">
                     <p className="">Grand Total</p>
-                    <p className="fw-semibold">₹{grandTotal.toLocaleString()}</p>
+                    <p className="fw-semibold">
+                      ₹{grandTotal.toLocaleString()}
+                    </p>
                   </div>
 
                   <hr />
 
-                  {totalPackageAmount != 0 && <div className="d-flex justify-content-between text-primary">
-                    <p className="">Margin after Discount</p>
-                    <p className="fw-semibold">
-                      ₹
-                      {typeof marginAfterDiscount === "number"
-                        ? marginAfterDiscount.toLocaleString()
-                        : "-"}
-                    </p>
-                  </div>}
+                  {totalPackageAmount != 0 && (
+                    <div className="d-flex justify-content-between text-primary">
+                      <p className="">Margin after Discount</p>
+                      <p className="fw-semibold">
+                        ₹
+                        {typeof marginAfterDiscount === "number"
+                          ? marginAfterDiscount.toLocaleString()
+                          : "-"}
+                      </p>
+                    </div>
+                  )}
 
-                  {totalPackageAmount != 0 && <div className="d-flex justify-content-between text-primary">
-                    <p className="">GST on Margin</p>
-                    <p className="fw-semibold">
-                      ₹
-                      {typeof marginGstValue === "number"
-                        ? marginGstValue.toLocaleString()
-                        : "-"}
-                    </p>
-                  </div>
-                  }
+                  {totalPackageAmount != 0 && (
+                    <div className="d-flex justify-content-between text-primary">
+                      <p className="">GST on Margin</p>
+                      <p className="fw-semibold">
+                        ₹
+                        {typeof marginGstValue === "number"
+                          ? marginGstValue.toLocaleString()
+                          : "-"}
+                      </p>
+                    </div>
+                  )}
 
-                  {totalPackageAmount != 0 &&
+                  {totalPackageAmount != 0 && (
                     <div className="d-flex justify-content-between text-success">
                       <p className="">Final Margin Total</p>
                       <p className="fw-semibold">
@@ -2056,14 +2197,14 @@ const CreateQuote = () => {
                           ? totalMarginFinal.toLocaleString()
                           : "-"}
                       </p>
-                    </div>}
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
           )}
         </Card>
-
-        {packages.length > 0 && (
+        {packages.length > 0 && !isZeroTotal && (
           <Card className="p-3 mb-3">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h4 style={{ fontSize: "18px", marginBottom: "0" }}>
@@ -2082,6 +2223,7 @@ const CreateQuote = () => {
                 }}
                 style={{ fontSize: "14px" }}
                 disabled={
+                  isZeroTotal || // <— add this
                   installments.reduce(
                     (sum, inst) => sum + inst.percentage,
                     0
@@ -2093,15 +2235,13 @@ const CreateQuote = () => {
             </div>
             {installments.reduce((sum, inst) => sum + inst.percentage, 0) >=
               100 && (
-                <div className="alert alert-success my-2">
-                  All{" "}
-                  {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
-                  of the amount has been allocated to {installments.length}{" "}
-                  installments.
-                </div>
-              )}
-
-
+              <div className="alert alert-success my-2">
+                All{" "}
+                {installments.reduce((sum, inst) => sum + inst.percentage, 0)}%
+                of the amount has been allocated to {installments.length}{" "}
+                installments.
+              </div>
+            )}
 
             <Table bordered responsive className="mb-0">
               <thead className="table-light">
@@ -2308,7 +2448,13 @@ const CreateQuote = () => {
         </Modal.Footer>
       </Modal>
 
-
+      <NotesModal
+        show={showNotesModal}
+        onHide={() => setShowNotesModal(false)}
+        onSave={handleSaveNotes}
+        note={note}
+        title="Add New Note"
+      />
     </div>
   );
 };

@@ -19,7 +19,8 @@ const calcExtrasCost = (extrasObj = {}, sheetCatalog = []) =>
 const computeAlbumTotalLocal = (a) => {
   if (!a) return 0;
   const suggestedTotal = Number(a?.suggested?.finalTotal);
-  if (!Number.isNaN(suggestedTotal) && suggestedTotal > 0) return suggestedTotal;
+  if (!Number.isNaN(suggestedTotal) && suggestedTotal > 0)
+    return suggestedTotal;
 
   const qty = Math.max(1, Number(a.qty) || 1);
   const unitAlbumPrice = Number(a.unitPrice) || 0;
@@ -142,7 +143,9 @@ const FinalizedQuotation = () => {
             heightLeft -= printableHeight;
           }
 
-          pdf.save(`ClassyCaptures_Quotation_${quotation?.quotationId || ""}.pdf`);
+          pdf.save(
+            `ClassyCaptures_Quotation_${quotation?.quotationId || ""}.pdf`
+          );
         })(),
         {
           loading: "Generating PDF...",
@@ -159,8 +162,12 @@ const FinalizedQuotation = () => {
   const handleShareWhatsApp = () => {
     const totalAmount = Number(quotation?.totalAmount || 0);
     let message = `*Quotation from Classy Captures*\n\n`;
-    message += `*Customer:* ${quotation?.leadId?.persons?.[0]?.name || "N/A"}\n`;
-    message += `*Phone:* ${quotation?.leadId?.persons?.[0]?.phoneNo || "N/A"}\n`;
+    message += `*Customer:* ${
+      quotation?.leadId?.persons?.[0]?.name || "N/A"
+    }\n`;
+    message += `*Phone:* ${
+      quotation?.leadId?.persons?.[0]?.phoneNo || "N/A"
+    }\n`;
 
     if (
       (quotation?.packages || []).length &&
@@ -184,7 +191,9 @@ const FinalizedQuotation = () => {
         const qty = a?.qty || 1;
         const per = Number(a?.unitPrice || 0);
         const total = computeAlbumTotalLocal(a);
-        message += `\n${i + 1}. ${albumName} — ${boxName}, Qty ${qty}\n   Unit (album): ₹${per.toLocaleString()} | Total: ₹${total.toLocaleString()}\n`;
+        message += `\n${
+          i + 1
+        }. ${albumName} — ${boxName}, Qty ${qty}\n   Unit (album): ₹${per.toLocaleString()} | Total: ₹${total.toLocaleString()}\n`;
       });
     }
 
@@ -257,7 +266,7 @@ const FinalizedQuotation = () => {
   const discountValue = Number(q.discountValue || 0);
   const gstApplied = !!q.gstApplied;
 
-  const grandTotal = Number(q.totalAmount)
+  const grandTotal = Number(q.totalAmount);
 
   const gstValue = Number.isFinite(Number(q.gstValue))
     ? Number(q.gstValue)
@@ -306,27 +315,22 @@ const FinalizedQuotation = () => {
           >
             <FaDownload /> Download PDF
           </Button>
-          {/* <Button
-            variant="light"
-            className="d-flex align-items-center gap-2 shadow-sm border rounded-3 px-3"
-            style={{ background: "#fff", fontWeight: 500 }}
-            onClick={handlePrint}
-          >
-            <FaPrint /> Print
-          </Button> */}
-          {q?.bookingStatus === "NotBooked" && <Button
-            variant="light"
-            className="d-flex align-items-center gap-2 shadow-sm border rounded-3 px-3"
-            style={{ background: "#fff", fontWeight: 500 }}
-            onClick={() =>
-              navigate(
-                `/customer/create-quote/${q.leadId?._id || ""}/${q.queryId}`,
-                { state: { selectQuotationId: q._id } }
-              )
-            }
-          >
-            <FaEdit /> Edit Quotation
-          </Button>}
+
+          {q?.bookingStatus === "NotBooked" && (
+            <Button
+              variant="light"
+              className="d-flex align-items-center gap-2 shadow-sm border rounded-3 px-3"
+              style={{ background: "#fff", fontWeight: 500 }}
+              onClick={() =>
+                navigate(
+                  `/customer/create-quote/${q.leadId?._id || ""}/${q.queryId}`,
+                  { state: { selectQuotationId: q._id } }
+                )
+              }
+            >
+              <FaEdit /> Edit Quotation
+            </Button>
+          )}
         </div>
 
         {/* Quotation content captured to PDF */}
@@ -334,9 +338,15 @@ const FinalizedQuotation = () => {
           {/* Letterhead */}
           <div className="text-center mb-4">
             <h2 className="fw-bold">Classy Captures</h2>
-            <p className="text-muted mb-0">Professional Photography & Videography</p>
-            <p className="text-muted mb-0">123 Photography Lane, Bangalore - 560001</p>
-            <p className="text-muted">+91 98765 43210 | info@classycaptures.com</p>
+            <p className="text-muted mb-0">
+              Professional Photography & Videography
+            </p>
+            <p className="text-muted mb-0">
+              123 Photography Lane, Bangalore - 560001
+            </p>
+            <p className="text-muted">
+              +91 98765 43210 | info@classycaptures.com
+            </p>
           </div>
           <hr className="my-4" />
 
@@ -346,18 +356,39 @@ const FinalizedQuotation = () => {
             <Row>
               <Col md={6}>
                 <h6 className="fw-bold mb-3">CLIENT DETAILS</h6>
-                <p className="mb-1"><strong>Name:</strong> {lead?.persons?.[0]?.name || "N/A"}</p>
-                <p className="mb-1"><strong>Phone:</strong> {lead?.persons?.[0]?.phoneNo || "N/A"}</p>
-                <p className="mb-1"><strong>Email:</strong> {lead?.persons?.[0]?.email || "N/A"}</p>
-                <p className="mb-1"><strong>Whatsapp:</strong> {lead?.persons?.[0]?.whatsappNo || lead?.persons?.[0]?.phoneNo || "N/A"}</p>
-                <p className="mb-1"><strong>Reference:</strong> {lead?.referenceForm || "N/A"}</p>
+                <p className="mb-1">
+                  <strong>Name:</strong> {lead?.persons?.[0]?.name || "N/A"}
+                </p>
+                <p className="mb-1">
+                  <strong>Phone:</strong> {lead?.persons?.[0]?.phoneNo || "N/A"}
+                </p>
+                <p className="mb-1">
+                  <strong>Email:</strong> {lead?.persons?.[0]?.email || "N/A"}
+                </p>
+                <p className="mb-1">
+                  <strong>Whatsapp:</strong>{" "}
+                  {lead?.persons?.[0]?.whatsappNo ||
+                    lead?.persons?.[0]?.phoneNo ||
+                    "N/A"}
+                </p>
+                <p className="mb-1">
+                  <strong>Reference:</strong> {lead?.referenceForm || "N/A"}
+                </p>
               </Col>
               <Col md={6} className="text-md-end">
                 <h6 className="fw-bold mb-3">QUOTATION DETAILS</h6>
-                <p className="mb-1"><strong>Quotation ID:</strong> {q.quotationId}</p>
-                <p className="mb-1"><strong>Title:</strong> {q.quoteTitle}</p>
-                <p className="mb-1"><strong>Description:</strong> {q.quoteDescription}</p>
-                <p className="mb-1"><strong>Date:</strong> {formatDate(q.createdAt)}</p>
+                <p className="mb-1">
+                  <strong>Quotation ID:</strong> {q.quotationId}
+                </p>
+                <p className="mb-1">
+                  <strong>Title:</strong> {q.quoteTitle}
+                </p>
+                <p className="mb-1">
+                  <strong>Description:</strong> {q.quoteDescription}
+                </p>
+                <p className="mb-1">
+                  <strong>Date:</strong> {formatDate(q.createdAt)}
+                </p>
               </Col>
             </Row>
           </div>
@@ -368,7 +399,8 @@ const FinalizedQuotation = () => {
               <h5 className="fw-bold mb-3">PACKAGE DETAILS</h5>
               {(q.packages || []).map((pkg, index) => {
                 const pkgTotal = (pkg.services || []).reduce(
-                  (sum, s) => sum + (Number(s.price) || 0) * (Number(s.qty) || 1),
+                  (sum, s) =>
+                    sum + (Number(s.price) || 0) * (Number(s.qty) || 1),
                   0
                 );
                 return (
@@ -380,15 +412,20 @@ const FinalizedQuotation = () => {
                           : pkg.categoryName}
                       </h6>
                       <small className="text-muted d-block">
-                        {formatDate(pkg.eventStartDate)} to {formatDate(pkg.eventEndDate)} | {pkg.slot}
+                        {formatDate(pkg.eventStartDate)} to{" "}
+                        {formatDate(pkg.eventEndDate)} | {pkg.slot}
                       </small>
                       {(pkg.venueName || pkg.venueAddress) && (
                         <div className="mt-2">
                           {pkg.venueName && (
-                            <small className=" d-block"><strong>Venue:</strong> {pkg.venueName}</small>
+                            <small className=" d-block">
+                              <strong>Venue:</strong> {pkg.venueName}
+                            </small>
                           )}
                           {pkg.venueAddress && (
-                            <small className=" d-block"><strong>Address:</strong> {pkg.venueAddress}</small>
+                            <small className=" d-block">
+                              <strong>Address:</strong> {pkg.venueAddress}
+                            </small>
                           )}
                         </div>
                       )}
@@ -399,7 +436,12 @@ const FinalizedQuotation = () => {
                           <tr>
                             <th style={{ width: "5%" }}>No</th>
                             <th style={{ width: "55%" }}>Service</th>
-                            <th className="text-center" style={{ width: "10%" }}>Qty</th>
+                            <th
+                              className="text-center"
+                              style={{ width: "10%" }}
+                            >
+                              Qty
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -411,7 +453,9 @@ const FinalizedQuotation = () => {
                             </tr>
                           ))}
                           <tr className="fw-bold">
-                            <td colSpan="2" className="text-left">Package Total:</td>
+                            <td colSpan="2" className="text-left">
+                              Package Total:
+                            </td>
                             <td className="text-left">{money(pkgTotal)}</td>
                           </tr>
                         </tbody>
@@ -428,7 +472,8 @@ const FinalizedQuotation = () => {
             <div className="mb-4">
               <h5 className="fw-bold mb-3">ALBUMS</h5>
               {(q.albums || []).map((a, i) => {
-                const tplLabel = a?.snapshot?.templateLabel || a?.templateId || "-";
+                const tplLabel =
+                  a?.snapshot?.templateLabel || a?.templateId || "-";
                 const boxLabel = a?.snapshot?.boxLabel || a?.boxTypeId || "-";
                 const qty = Math.max(1, Number(a?.qty) || 1);
                 const unitPriceAlbumOnly = Number(a?.unitPrice) || 0;
@@ -437,23 +482,29 @@ const FinalizedQuotation = () => {
                 const sheetCatalog = Array.isArray(a?.snapshot?.sheetTypes)
                   ? a.snapshot.sheetTypes
                   : [];
-                const getSheet = (id) => sheetCatalog.find((s) => s.id === id) || {};
+                const getSheet = (id) =>
+                  sheetCatalog.find((s) => s.id === id) || {};
                 const entriesWithQty = (obj) =>
-                  Object.entries(obj || {}).filter(([, v]) => (Number(v) || 0) > 0);
+                  Object.entries(obj || {}).filter(
+                    ([, v]) => (Number(v) || 0) > 0
+                  );
 
                 const extrasShared = a?.extras?.shared || {};
                 const extrasPerUnitRaw = Array.isArray(a?.extras?.perUnit)
                   ? a.extras.perUnit
                   : [];
 
-                const extrasPerUnit = Array.from({ length: qty }).map((_, idx) => {
-                  const e = extrasPerUnitRaw[idx];
-                  if (e instanceof Map) return Object.fromEntries(e);
-                  return e || {};
-                });
+                const extrasPerUnit = Array.from({ length: qty }).map(
+                  (_, idx) => {
+                    const e = extrasPerUnitRaw[idx];
+                    if (e instanceof Map) return Object.fromEntries(e);
+                    return e || {};
+                  }
+                );
 
                 const isPerUnit =
-                  !!a?.customizePerUnit && extrasPerUnit.some((o) =>
+                  !!a?.customizePerUnit &&
+                  extrasPerUnit.some((o) =>
                     Object.values(o).some((v) => Number(v) > 0)
                   );
 
@@ -467,8 +518,12 @@ const FinalizedQuotation = () => {
                         </small>
                       </div>
                       <div className="text-end">
-                        <div className="small text-muted">Unit Price (album only)</div>
-                        <div className="fw-semibold">{money(unitPriceAlbumOnly)}</div>
+                        <div className="small text-muted">
+                          Unit Price (album only)
+                        </div>
+                        <div className="fw-semibold">
+                          {money(unitPriceAlbumOnly)}
+                        </div>
                       </div>
                     </Card.Header>
 
@@ -479,9 +534,13 @@ const FinalizedQuotation = () => {
                             <th style={{ width: "6%" }}>#</th>
                             <th>Album</th>
                             <th>Box</th>
-                            <th className="text-center" style={{ width: "8%" }}>Qty</th>
+                            <th className="text-center" style={{ width: "8%" }}>
+                              Qty
+                            </th>
                             <th style={{ width: "18%" }}>Unit Price (album)</th>
-                            <th className="text-end" style={{ width: "18%" }}>Total</th>
+                            <th className="text-end" style={{ width: "18%" }}>
+                              Total
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -491,7 +550,9 @@ const FinalizedQuotation = () => {
                             <td>{boxLabel}</td>
                             <td className="text-center">{qty}</td>
                             <td>{money(unitPriceAlbumOnly)}</td>
-                            <td className="text-end fw-semibold">{money(total)}</td>
+                            <td className="text-end fw-semibold">
+                              {money(total)}
+                            </td>
                           </tr>
                         </tbody>
                       </Table>
@@ -513,30 +574,38 @@ const FinalizedQuotation = () => {
                                     <th>Qty / unit</th>
                                     <th>Price / sheet</th>
                                     <th>Cost / unit</th>
-                                    <th className="text-end">Total (all units)</th>
+                                    <th className="text-end">
+                                      Total (all units)
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {entriesWithQty(extrasShared).map(([k, v]) => {
-                                    const sheet = getSheet(k);
-                                    const price = Number(sheet.price) || 0;
-                                    const qtyPerUnit = Number(v) || 0;
-                                    const costPerUnit = qtyPerUnit * price;
-                                    const totalAllUnits = costPerUnit * qty;
-                                    return (
-                                      <tr key={k}>
-                                        <td>{sheet.label || k}</td>
-                                        <td>{qtyPerUnit}</td>
-                                        <td>{money(price)}</td>
-                                        <td>{money(costPerUnit)}</td>
-                                        <td className="text-end">{money(totalAllUnits)}</td>
-                                      </tr>
-                                    );
-                                  })}
+                                  {entriesWithQty(extrasShared).map(
+                                    ([k, v]) => {
+                                      const sheet = getSheet(k);
+                                      const price = Number(sheet.price) || 0;
+                                      const qtyPerUnit = Number(v) || 0;
+                                      const costPerUnit = qtyPerUnit * price;
+                                      const totalAllUnits = costPerUnit * qty;
+                                      return (
+                                        <tr key={k}>
+                                          <td>{sheet.label || k}</td>
+                                          <td>{qtyPerUnit}</td>
+                                          <td>{money(price)}</td>
+                                          <td>{money(costPerUnit)}</td>
+                                          <td className="text-end">
+                                            {money(totalAllUnits)}
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+                                  )}
                                 </tbody>
                               </Table>
                             ) : (
-                              <div className="text-muted">No extra sheets selected.</div>
+                              <div className="text-muted">
+                                No extra sheets selected.
+                              </div>
                             )}
                           </>
                         ) : (
@@ -545,7 +614,9 @@ const FinalizedQuotation = () => {
                               Customized <strong>per unit</strong>
                             </div>
                             {Array.from({ length: qty }).map((_, idx) => {
-                              const rows = entriesWithQty(extrasPerUnit[idx] || {});
+                              const rows = entriesWithQty(
+                                extrasPerUnit[idx] || {}
+                              );
                               return (
                                 <div key={idx} className="mb-2">
                                   <div className="text-muted mb-1">
@@ -564,7 +635,8 @@ const FinalizedQuotation = () => {
                                       <tbody>
                                         {rows.map(([k, v]) => {
                                           const sheet = getSheet(k);
-                                          const price = Number(sheet.price) || 0;
+                                          const price =
+                                            Number(sheet.price) || 0;
                                           const qn = Number(v) || 0;
                                           const cost = qn * price;
                                           return (
@@ -579,7 +651,9 @@ const FinalizedQuotation = () => {
                                       </tbody>
                                     </Table>
                                   ) : (
-                                    <div className="text-muted">No extra sheets.</div>
+                                    <div className="text-muted">
+                                      No extra sheets.
+                                    </div>
                                   )}
                                 </div>
                               );
@@ -603,12 +677,10 @@ const FinalizedQuotation = () => {
                 <div className="fw-bold">{money(totalAlbumAmount)}</div>
               </div>
 
-
               <div className="d-flex justify-content-between">
                 <div className="fw-bold">Discount ({discountPercent}%)</div>
                 <div className="fw-bold">- {money(discountValue)}</div>
               </div>
-
 
               <div className="d-flex justify-content-between">
                 <div className="fw-bold">Gst (18%) </div>
@@ -619,7 +691,6 @@ const FinalizedQuotation = () => {
                 <div className="fw-bold">Grand Total</div>
                 <div className="fw-bold">{money(grandTotal)}</div>
               </div>
-
             </div>
           )}
 
@@ -654,12 +725,16 @@ const FinalizedQuotation = () => {
                   );
                 })}
                 <tr className="fw-bold">
-                  <td colSpan="2" className="text-end">Total:</td>
+                  <td colSpan="2" className="text-end">
+                    Total:
+                  </td>
                   <td>
                     {(q.installments || []).reduce(
-                      (sum, inst) => sum + (Number(inst.paymentPercentage) || 0),
+                      (sum, inst) =>
+                        sum + (Number(inst.paymentPercentage) || 0),
                       0
-                    )}%
+                    )}
+                    %
                   </td>
                   <td colSpan="2">{money(grandTotal)}</td>
                 </tr>
@@ -671,14 +746,24 @@ const FinalizedQuotation = () => {
           <div className="mb-4">
             <h5 className="fw-bold mb-3">TERMS AND CONDITIONS</h5>
             <ol className="ps-3">
-              <li className="mb-2">This quotation is valid for 30 days from the date of issue.</li>
               <li className="mb-2">
-                A booking fee of {(q.installments?.[0]?.paymentPercentage ?? 30)}% is required to confirm the booking.
+                This quotation is valid for 30 days from the date of issue.
+              </li>
+              <li className="mb-2">
+                A booking fee of {q.installments?.[0]?.paymentPercentage ?? 30}%
+                is required to confirm the booking.
               </li>
               <li className="mb-2">All payments are non-refundable.</li>
-              <li className="mb-2">Any additional hours or services will be charged separately.</li>
-              <li className="mb-2">Delivery of final products will be within 45-60 days after the event.</li>
-              <li className="mb-2">Travel outside of city limits may incur additional charges.</li>
+              <li className="mb-2">
+                Any additional hours or services will be charged separately.
+              </li>
+              <li className="mb-2">
+                Delivery of final products will be within 45-60 days after the
+                event.
+              </li>
+              <li className="mb-2">
+                Travel outside of city limits may incur additional charges.
+              </li>
             </ol>
           </div>
 
@@ -697,7 +782,9 @@ const FinalizedQuotation = () => {
           </div>
           <div className="text-center mt-5 pt-4 text-muted">
             <p>Thank you for choosing Classy Captures!</p>
-            <p className="small">© {new Date().getFullYear()} Classy Captures. All rights reserved.</p>
+            <p className="small">
+              © {new Date().getFullYear()} Classy Captures. All rights reserved.
+            </p>
           </div>
         </div>
 

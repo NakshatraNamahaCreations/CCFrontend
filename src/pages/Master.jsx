@@ -16,8 +16,8 @@ const Master = () => {
         return <Services />;
       case "presetquote":
         return <PresetQuotation />;
-      case "addComplementary":
-        return <Complementary />;
+      // case "addComplementary":
+      //   return <Complementary />;
       case "addReferenceFrom":
         return <Reference />;
       default:
@@ -50,13 +50,13 @@ const Master = () => {
         >
         Preset Quotation
         </button>
-        <button
+        {/* <button
           className={`btn rounded-1 shadow-sm  w-25 ${activeTab === "addComplementary" ? "btn-dark" : "btn-white"}`}
           onClick={() => setActiveTab("addComplementary")}
           style={{ fontSize: "12px" }}
         >
         Add Complementary
-        </button>
+        </button> */}
         <button
           className={`btn rounded-1 shadow-sm  w-25 ${activeTab === "addReferenceFrom" ? "btn-dark" : "btn-white"}`}
           onClick={() => setActiveTab("addReferenceFrom")}

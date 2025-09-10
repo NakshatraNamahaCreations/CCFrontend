@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
   const [todaysEventsCount, setTodaysEventsCount] = useState(0);
   const [completedQuotationsCount, setCompletedQuotationsCount] = useState(0);
+  const [todaysCallFollowupCount, setTodaysCallFollowupCount] = useState(0);
 
   const fetchNewQueriesCount = async () => {
     // ✅ Remove (req, res) parameters
@@ -96,6 +97,19 @@ const Dashboard = () => {
       console.log("Error in fetching completed quotations count", error);
     }
   };
+  const fetchTodaysCallfollowupCount = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:5000/api/lead/queries/rescheduled/today"
+      );
+
+      if (response.data.success) {
+        setTodaysCallFollowupCount(response.data.count);
+      }
+    } catch (error) {
+      console.log("Error in fetching completed quotations count", error);
+    }
+  };
 
   useEffect(() => {
     fetchNewQueriesCount();
@@ -103,6 +117,7 @@ const Dashboard = () => {
     fetchPendingPaymentCount();
     fetchTodaysEventsCount();
     fetchCompletedQuotationsCount();
+    fetchTodaysCallfollowupCount()
   }, []);
 
   const preProductionData = [
@@ -113,9 +128,15 @@ const Dashboard = () => {
       icon: <AiOutlineUser size={20} />,
     },
     {
-      title: "Follow Up",
+      title: "Payment Follow Up",
       count: followupCounts,
       subtitle: "Clients",
+      icon: <AiOutlinePhone size={20} />,
+    },
+    {
+      title: "Today's Follow Up",
+      count: todaysCallFollowupCount,
+      subtitle: "Call ",
       icon: <AiOutlinePhone size={20} />,
     },
     {
