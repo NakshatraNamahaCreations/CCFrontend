@@ -809,6 +809,17 @@ const CreateQuote = () => {
 
   // In custom modal, on save/update
   const handleCreateOrUpdateCustomPackage = () => {
+    if (
+      !selectedCategory ||
+      !selectedSlot ||
+      !eventStartDate ||
+      !eventEndDate ||
+      !venueName ||
+      !venueAddress
+    ) {
+      alert("Please fill all required fields");
+      return;
+    }
     const selectedServices = services.filter((s) => s.checked);
     if (!selectedCategory || selectedServices.length === 0) {
       toast.error("Please select a category and at least one service.");
@@ -1482,6 +1493,7 @@ const CreateQuote = () => {
                           value={customCategory}
                           onChange={(e) => setCustomCategory(e.target.value)}
                           className="mt-2"
+                          required
                         />
                       )}
                   </Form.Group>
@@ -1497,6 +1509,7 @@ const CreateQuote = () => {
                         if (option.value !== "others") setCustomSlot("");
                       }}
                       placeholder="Select Slot"
+                      required
                     />
                     {selectedSlot && selectedSlot.value === "others" && (
                       <Form.Control
@@ -1505,6 +1518,7 @@ const CreateQuote = () => {
                         value={customSlot}
                         onChange={(e) => setCustomSlot(e.target.value)}
                         className="mt-2"
+                        required
                       />
                     )}
                   </Form.Group>
@@ -1518,6 +1532,7 @@ const CreateQuote = () => {
                       type="date"
                       value={eventStartDate}
                       onChange={(e) => setEventStartDate(e.target.value)}
+                      required
                     />
                   </Form.Group>
                 </Col>
@@ -1528,6 +1543,7 @@ const CreateQuote = () => {
                       type="date"
                       value={eventEndDate}
                       onChange={(e) => setEventEndDate(e.target.value)}
+                      required
                     />
                   </Form.Group>
                 </Col>
@@ -1540,6 +1556,7 @@ const CreateQuote = () => {
                       type="text"
                       value={venueName}
                       onChange={(e) => setVenueName(e.target.value)}
+                      required
                     />
                   </Form.Group>
                 </Col>
@@ -1550,6 +1567,7 @@ const CreateQuote = () => {
                       type="text"
                       value={venueAddress}
                       onChange={(e) => setVenueAddress(e.target.value)}
+                      required
                     />
                   </Form.Group>
                 </Col>

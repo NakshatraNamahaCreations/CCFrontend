@@ -2901,7 +2901,7 @@ const BookingdetailsPage = () => {
                 <strong>Reference:</strong>{" "}
                 <span>{quotationData?.leadId?.referenceForm}</span>
               </div>
-              <div className="col-md-4 " style={{fontSize:"16px"}} >
+              <div className="col-md-4 " style={{ fontSize: "16px" }}>
                 <strong>Note:</strong> <span>{quotationData?.quoteNote}</span>
               </div>
             </div>
@@ -3637,167 +3637,168 @@ const BookingdetailsPage = () => {
       )}
 
       {/* Installments */}
-      <Card className="mb-4 shadow-sm border-0">
-        <div className="d-flex justify-content-between align-items-center border-bottom px-3 py-2">
-          <h6 className="fw-bold mb-0">Installment Details</h6>
-          <Button
-            variant="outline-dark"
-            size="sm"
-            onClick={handleAddInstallment}
-            disabled={getTotalAllocatedPercentage() >= 100}
-          >
-            <FaPlus className="me-2" /> Add Installment
-          </Button>
-        </div>
-        <div className="table-responsive">
-          <Table
-            className="mb-0"
-            bordered
-            hover
-            size="sm"
-            style={{ fontSize: "12px" }}
-          >
-            <thead className="table-light">
-              <tr>
-                <th>Installment</th>
-                <th>Percentage</th>
-                <th>Amount</th>
-                <th>Paid Amt</th>
-                <th>Pending Amt</th>
-                <th>Date</th>
-                <th>Mode</th>
-                <th>Status</th>
-                <th>Account Holder</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {installments.map((inst, index) => {
-                return (
-                  <tr key={index}>
-                    <td>Installment {index + 1}</td>
+      {installments.length > 0 && (
+        <Card className="mb-4 shadow-sm border-0">
+          <div className="d-flex justify-content-between align-items-center border-bottom px-3 py-2">
+            <h6 className="fw-bold mb-0">Installment Details</h6>
+            <Button
+              variant="outline-dark"
+              size="sm"
+              onClick={handleAddInstallment}
+              disabled={getTotalAllocatedPercentage() >= 100}
+            >
+              <FaPlus className="me-2" /> Add Installment
+            </Button>
+          </div>
+          <div className="table-responsive">
+            <Table
+              className="mb-0"
+              bordered
+              hover
+              size="sm"
+              style={{ fontSize: "12px" }}
+            >
+              <thead className="table-light">
+                <tr>
+                  <th>Installment</th>
+                  <th>Percentage</th>
+                  <th>Amount</th>
+                  <th>Paid Amt</th>
+                  <th>Pending Amt</th>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Status</th>
+                  <th>Account Holder</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {installments.map((inst, index) => {
+                  return (
+                    <tr key={index}>
+                      <td>Installment {index + 1}</td>
 
-                    <td>
-                      {editIndex === index && inst.status !== "Completed" ? (
-                        <Form.Control
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={inst.paymentPercentage}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              index,
-                              "paymentPercentage",
-                              e.target.value
-                            )
-                          }
-                          style={{ fontSize: "13px", width: "80px" }}
-                        />
-                      ) : (
-                        `${inst.paymentPercentage}%`
-                      )}
-                    </td>
-                    <td>₹{inst.paymentAmount?.toLocaleString()} </td>
-                    <td>₹{inst.paidAmount?.toLocaleString()} </td>
+                      <td>
+                        {editIndex === index && inst.status !== "Completed" ? (
+                          <Form.Control
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={inst.paymentPercentage}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "paymentPercentage",
+                                e.target.value
+                              )
+                            }
+                            style={{ fontSize: "13px", width: "80px" }}
+                          />
+                        ) : (
+                          `${inst.paymentPercentage}%`
+                        )}
+                      </td>
+                      <td>₹{inst.paymentAmount?.toLocaleString()} </td>
+                      <td>₹{inst.paidAmount?.toLocaleString()} </td>
 
-                    <td>₹{inst.pendingAmount?.toLocaleString()} </td>
+                      <td>₹{inst.pendingAmount?.toLocaleString()} </td>
 
-                    <td>{inst.dueDate}</td>
-                    <td>{inst.paymentMode || "-"}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          inst.status === "Completed"
-                            ? "bg-success"
-                            : inst.status === "Partial Paid"
-                            ? "bg-primary" // Custom class defined in your CSS
-                            : "bg-danger"
-                        }`}
-                      >
-                        {inst.status}
-                      </span>
-                    </td>
-                    <td>
-                      {inst.accountHolders && inst.accountHolders.length > 0
-                        ? inst.accountHolders.map((h, i) => (
-                            <div key={i}>{h.name}</div>
-                          ))
-                        : "-"}
-                    </td>
+                      <td>{inst.dueDate}</td>
+                      <td>{inst.paymentMode || "-"}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            inst.status === "Completed"
+                              ? "bg-success"
+                              : inst.status === "Partial Paid"
+                              ? "bg-primary" // Custom class defined in your CSS
+                              : "bg-danger"
+                          }`}
+                        >
+                          {inst.status}
+                        </span>
+                      </td>
+                      <td>
+                        {inst.accountHolders && inst.accountHolders.length > 0
+                          ? inst.accountHolders.map((h, i) => (
+                              <div key={i}>{h.name}</div>
+                            ))
+                          : "-"}
+                      </td>
 
-                    <td>
-                      {/* Edit and Save/Cancel buttons - only shown for Pending status */}
-                      {inst.status === "Pending" &&
-                        (editIndex === index ? (
-                          <>
+                      <td>
+                        {/* Edit and Save/Cancel buttons - only shown for Pending status */}
+                        {inst.status === "Pending" &&
+                          (editIndex === index ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="success"
+                                onClick={() => handleSaveInstallment(index)}
+                              >
+                                <FaSave />
+                              </Button>{" "}
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setEditIndex(null)}
+                              >
+                                <FaTimes />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant=""
+                              onClick={() => handleEditToggle(index)}
+                            >
+                              <FaEdit />
+                            </Button>
+                          ))}
+
+                        {/* Delete button - only shown for Pending status */}
+                        {inst.status === "Pending" && (
+                          <Button
+                            variant=""
+                            size="sm"
+                            onClick={() => handleDeleteInstallment(index)}
+                            className="ms-1"
+                          >
+                            <img
+                              src={deleteIcon}
+                              alt="delete"
+                              width="14"
+                              height="14"
+                            />
+                          </Button>
+                        )}
+
+                        {/* Pay button - shown for Pending or Partial Paid status when there's pending amount */}
+                        {(inst.status === "Pending" ||
+                          inst.status === "Partial Paid") &&
+                          inst.pendingAmount > 0 && (
                             <Button
                               size="sm"
                               variant="success"
-                              onClick={() => handleSaveInstallment(index)}
+                              onClick={() => handleOpenPay(inst)}
+                              className="ms-1"
                             >
-                              <FaSave />
-                            </Button>{" "}
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setEditIndex(null)}
-                            >
-                              <FaTimes />
+                              Pay
                             </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant=""
-                            onClick={() => handleEditToggle(index)}
-                          >
-                            <FaEdit />
-                          </Button>
-                        ))}
-
-                      {/* Delete button - only shown for Pending status */}
-                      {inst.status === "Pending" && (
-                        <Button
-                          variant=""
-                          size="sm"
-                          onClick={() => handleDeleteInstallment(index)}
-                          className="ms-1"
-                        >
-                          <img
-                            src={deleteIcon}
-                            alt="delete"
-                            width="14"
-                            height="14"
-                          />
-                        </Button>
-                      )}
-
-                      {/* Pay button - shown for Pending or Partial Paid status when there's pending amount */}
-                      {(inst.status === "Pending" ||
-                        inst.status === "Partial Paid") &&
-                        inst.pendingAmount > 0 && (
-                          <Button
-                            size="sm"
-                            variant="success"
-                            onClick={() => handleOpenPay(inst)}
-                            className="ms-1"
-                          >
-                            Pay
-                          </Button>
-                        )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Table>
-          <div className="text-end px-3 py-2">
-            <strong>Total Allocated: </strong>
-            {getTotalAllocatedPercentage()}%
+                          )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+            <div className="text-end px-3 py-2">
+              <strong>Total Allocated: </strong>
+              {getTotalAllocatedPercentage()}%
+            </div>
           </div>
-        </div>
-      </Card>
-
+        </Card>
+      )}
       {/* Payment Modal */}
       <Modal show={showPaymentModal} onHide={() => setShowPaymentModal(false)}>
         <Modal.Header closeButton>

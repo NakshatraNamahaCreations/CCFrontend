@@ -261,14 +261,14 @@ const AvailableVendors = () => {
   setLoading(true);
   try {
     const res = await axios.get(
-      `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${eventStartDate}`
+      `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${eventStartDate}&slot=${slot}`
     );
 
     if (res.data?.success) {
       const availableVendors = res.data.data.availableVendors || [];
       setVendors(availableVendors);
       if (availableVendors.length === 0) {
-        toast.warn(`No available vendors for ${serviceName} on ${selectedDate}`);
+        toast.warn(`No available vendors for ${serviceName} on ${eventStartDate}`);
       }
     } else {
       toast.error("Failed to load vendors");
