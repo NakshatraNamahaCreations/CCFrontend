@@ -258,28 +258,28 @@ const AvailableVendors = () => {
     // };
 
     const fetchVendors = async () => {
-  setLoading(true);
-  try {
-    const res = await axios.get(
-      `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${eventStartDate}&slot=${slot}`
-    );
+      setLoading(true);
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${eventStartDate}&slot=${slot}`
+        );
 
-    if (res.data?.success) {
-      const availableVendors = res.data.data.availableVendors || [];
-      setVendors(availableVendors);
-      if (availableVendors.length === 0) {
-        toast.warn(`No available vendors for ${serviceName} on ${eventStartDate}`);
+        if (res.data?.success) {
+          const availableVendors = res.data.data.availableVendors || [];
+          setVendors(availableVendors);
+          if (availableVendors.length === 0) {
+            toast.warn(`No available vendors for ${serviceName} on ${eventStartDate}`);
+          }
+        } else {
+          toast.error("Failed to load vendors");
+        }
+      } catch (error) {
+        console.error("Fetch vendors error:", error);
+        toast.error("Error fetching vendors");
+      } finally {
+        setLoading(false);
       }
-    } else {
-      toast.error("Failed to load vendors");
-    }
-  } catch (error) {
-    console.error("Fetch vendors error:", error);
-    toast.error("Error fetching vendors");
-  } finally {
-    setLoading(false);
-  }
-};
+    };
     fetchVendors();
   }, [
     navigate,
@@ -322,13 +322,13 @@ const AvailableVendors = () => {
     >
       <div className="d-flex gap-2 align-items-center justify-content-between p-2 rounded">
         <div className="w-50 d-flex gap-2 align-items-center">
-          <div className="w-50 bg-white d-flex gap-2 align-items-center p-2 rounded" style={{fontWeight:"700"}}>
-          {serviceName}
-          
+          <div className="w-50 bg-white d-flex gap-2 align-items-center p-2 rounded" style={{ fontWeight: "700" }}>
+            {serviceName}
+
           </div>
-         
+
         </div>
-      
+
       </div>
 
       <div className="container my-4">
@@ -346,16 +346,26 @@ const AvailableVendors = () => {
                       <th style={{ fontSize: 14 }}>Profile</th>
                       <th style={{ fontSize: 14 }}>Vendor Name</th>
                       <th style={{ fontSize: 14 }}>Phone Number</th>
-                      <th style={{ fontSize: 14, width: "20%" }}>Expertise</th>
+                      <th style={{ fontSize: 14}}>Expertise</th>
                       <th style={{ fontSize: 14 }}>Experience</th>
                       <th style={{ fontSize: 14 }}>Source</th>
+                      <th style={{ fontSize: 14 }}>Salary</th>
                       <th style={{ fontSize: 14 }}>Status</th>
                       <th style={{ fontSize: 14 }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {vendors.map((vendor) => (
-                      <tr
+                    {console.log("vendors", vendors)}
+                    {vendors.map((vendor) => {
+
+                      const specialization = vendor.specialization.find(
+                        (item) => item.name === serviceName
+                      );
+
+                      console.log(specialization?.salary); // salary if found
+
+
+                      return (<tr
                         key={vendor._id || vendor.id}
                         className="text-center fw-semibold"
                         style={{ fontSize: 12 }}
@@ -377,11 +387,11 @@ const AvailableVendors = () => {
                         </td>
                         <td>{vendor.name}</td>
                         <td>{vendor.phoneNo}</td>
-                        <td>
-                          {vendor.services?.map((s) => s.name).join(", ")}
-                        </td>
+                      
+                        <td>{vendor.designation}</td>
                         <td>{vendor.expertiseLevel}</td>
                         <td>{vendor.category}</td>
+                        <td>{specialization?.salary}</td>
                         <td>
                           <Badge bg="success">Available</Badge>
                         </td>
@@ -400,8 +410,9 @@ const AvailableVendors = () => {
                             Assign
                           </Button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)
+                    }
+                    )}
                   </tbody>
                 </Table>
               </div>

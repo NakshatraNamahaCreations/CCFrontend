@@ -130,7 +130,7 @@ const Header = () => {
       setCurrentTab("Profile");
     } 
     else if (matchPath("/follow-ups/calendar", path)) {
-      setCurrentTab("Payment Follow-Up Calendar");
+      setCurrentTab("Follow-Up Calendar");
     }
     else if (matchPath("/follow-ups/date/:date", path)) {
       setCurrentTab("Payment Follow-Up list");

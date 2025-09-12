@@ -518,77 +518,74 @@ const VendorAssign = () => {
   };
 
   // Assistant assign handler
-// Assistant assign handler
-const handleAssistantSelect = async (
-  serviceId,
-  unitIndex,
-  serviceName,
-  selectedOption
-) => {
-  const assistantId = selectedOption?.value || null;
-  const assistantName = selectedOption?.label || "";
+  // Assistant assign handler
+  const handleAssistantSelect = async (
+    serviceId,
+    unitIndex,
+    serviceName,
+    selectedOption
+  ) => {
+    const assistantId = selectedOption?.value || null;
+    const assistantName = selectedOption?.label || "";
 
-  try {
-    await axios.put(
-      `http://localhost:5000/api/quotations/${
-        quotation._id || quotationId
-      }/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`,
-      { assistantId, assistantName }
-    );
+    try {
+      await axios.put(
+        `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`, { assistantId, assistantName, eventStartDate: pkg.eventStartDate, slot: pkg.slot }
+      );
 
-    // reflect in UI
-    setQuotation((prev) => {
-      if (!prev) return prev;
-      const q = { ...prev, packages: [...prev.packages] };
-      const p0 = { ...q.packages[0] };
-      q.packages[0] = p0;
+      // reflect in UI
+      setQuotation((prev) => {
+        if (!prev) return prev;
+        const q = { ...prev, packages: [...prev.packages] };
+        const p0 = { ...q.packages[0] };
+        q.packages[0] = p0;
 
-      p0.services = p0.services.map((s) => {
-        if (s._id !== serviceId) return s;
-        const copy = { ...s };
-        const qty = Math.max(1, copy.qty || 1);
-        const arr = Array.isArray(copy.assignedAssistants)
-          ? [...copy.assignedAssistants]
-          : Array(qty).fill(null);
-        arr[unitIndex] = assistantId ? { assistantId, assistantName } : null;
-        copy.assignedAssistants = arr;
-        return copy;
+        p0.services = p0.services.map((s) => {
+          if (s._id !== serviceId) return s;
+          const copy = { ...s };
+          const qty = Math.max(1, copy.qty || 1);
+          const arr = Array.isArray(copy.assignedAssistants)
+            ? [...copy.assignedAssistants]
+            : Array(qty).fill(null);
+          arr[unitIndex] = assistantId ? { assistantId, assistantName } : null;
+          copy.assignedAssistants = arr;
+          return copy;
+        });
+        return q;
       });
-      return q;
-    });
 
-    toast.success(
-      assistantId
-        ? `Assistant assigned: ${assistantName || "Updated"}`
-        : "Assistant cleared"
-    );
+      toast.success(
+        assistantId
+          ? `Assistant assigned: ${assistantName || "Updated"}`
+          : "Assistant cleared"
+      );
 
-    // 🔄 Re-fetch available vendors after assistant change
-    if (serviceName && pkg?.eventStartDate && pkg?.slot) {
-      setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
-            serviceName
-          )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
-        );
+      // 🔄 Re-fetch available vendors after assistant change
+      if (serviceName && pkg?.eventStartDate && pkg?.slot) {
+        setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
+        try {
+          const res = await axios.get(
+            `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+              serviceName
+            )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
+          );
 
-        const list = res.data?.data?.availableVendors ?? [];
-        const opts = list.map((v) => ({ id: v._id, name: v.name }));
+          const list = res.data?.data?.availableVendors ?? [];
+          const opts = list.map((v) => ({ id: v._id, name: v.name }));
 
-        setAssistantOptionsMap((m) => ({ ...m, [serviceName]: opts }));
-      } catch (err) {
-        console.error("Re-fetch assistants error:", err);
-        setAssistantOptionsMap((m) => ({ ...m, [serviceName]: [] }));
-      } finally {
-        setAssistantLoadingMap((m) => ({ ...m, [serviceName]: false }));
+          setAssistantOptionsMap((m) => ({ ...m, [serviceName]: opts }));
+        } catch (err) {
+          console.error("Re-fetch assistants error:", err);
+          setAssistantOptionsMap((m) => ({ ...m, [serviceName]: [] }));
+        } finally {
+          setAssistantLoadingMap((m) => ({ ...m, [serviceName]: false }));
+        }
       }
+    } catch (err) {
+      console.error("Assign assistant error:", err);
+      toast.error("Failed to assign assistant");
     }
-  } catch (err) {
-    console.error("Assign assistant error:", err);
-    toast.error("Failed to assign assistant");
-  }
-};
+  };
 
   if (loading || !quotation) {
     return <div className="text-center mt-5">Loading...</div>;
@@ -661,12 +658,12 @@ const handleAssistantSelect = async (
 
                   const currentValue = currentAssistant?.assistantId
                     ? {
-                        value: currentAssistant.assistantId,
-                        label:
-                          currentAssistant.assistantName ||
-                          asstRaw.find((a) => a.id === currentAssistant.assistantId)?.name ||
-                          "Selected assistant",
-                      }
+                      value: currentAssistant.assistantId,
+                      label:
+                        currentAssistant.assistantName ||
+                        asstRaw.find((a) => a.id === currentAssistant.assistantId)?.name ||
+                        "Selected assistant",
+                    }
                     : null;
 
                   return (

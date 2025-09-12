@@ -121,6 +121,9 @@
 // };
 
 // export default FollowUpCalendar;
+
+
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
@@ -141,74 +144,92 @@ const FollowUpCalendar = () => {
     const [selectedTab, setSelectedTab] = useState('payment'); // Default to payment
 
     // Fetch follow-ups from API for the selected tab
+    // ---- Fetch follow-ups from API for the selected tab ----
     useEffect(() => {
         const fetchFollowUps = async () => {
             try {
-                if (selectedTab === 'payment') {
-                    // Fetch Payment Follow-ups
-                    const response = await axios.get('http://localhost:5000/api/follow-up/');
+                if (selectedTab === "payment") {
+                    // ✅ Fetch Payment Follow-ups
+                    const response = await axios.get("http://localhost:5000/api/follow-up/");
                     if (response.data?.success) {
                         const fetchedFollowUps = response.data.data || [];
                         setFollowUps(fetchedFollowUps);
 
-                        console.log("fetchedFollowUps", fetchedFollowUps)
-                        // Process events for the calendar
-                        const dateCountMap = {};
-                        fetchedFollowUps.forEach(followUp => {
-                            const dateStr = moment(followUp.followUpDate).format('YYYY-MM-DD');
-                            dateCountMap[dateStr] = (dateCountMap[dateStr] || 0) + 1;
-                        });
+                        if (fetchedFollowUps.length === 0) {
+                            setEvents([]); // ✅ show empty calendar if no payment follow-ups
+                        } else {
+                            const dateCountMap = {};
+                            fetchedFollowUps.forEach((followUp) => {
+                                if (followUp.followUpDate) {
+                                    const dateStr = moment(followUp.followUpDate).format("YYYY-MM-DD");
+                                    dateCountMap[dateStr] = (dateCountMap[dateStr] || 0) + 1;
+                                }
+                            });
 
-                        const followUpEvents = Object.entries(dateCountMap).map(([dateStr, count]) => ({
-                            id: dateStr,
-                            title: `${count} ${count === 1 ? 'Follow-up' : 'Follow-ups'}`,
-                            start: new Date(dateStr),
-                            end: new Date(dateStr),
-                            allDay: true,
-                            count,
-                            isOverdue: moment(dateStr).isBefore(moment(), 'day')
-                        }));
+                            const followUpEvents = Object.entries(dateCountMap).map(([dateStr, count]) => ({
+                                id: dateStr,
+                                title: `${count} ${count === 1 ? "Follow-up" : "Follow-ups"}`,
+                                start: new Date(dateStr),
+                                end: new Date(dateStr),
+                                allDay: true,
+                                count,
+                                isOverdue: moment(dateStr).isBefore(moment(), "day"),
+                            }));
 
-                        setEvents(followUpEvents);
+                            setEvents(followUpEvents);
+                        }
+                    } else {
+                        setEvents([]); // fallback if success is false
                     }
-                } else if (selectedTab === 'call') {
-                    // Fetch Call Follow-ups
-                    const response = await axios.get('http://localhost:5000/api/lead/status/Call%20Later');
+                } else if (selectedTab === "call") {
+                    // ✅ Fetch Call Follow-ups
+                    const response = await axios.get(
+                        "http://localhost:5000/api/lead/status/Call%20Later"
+                    );
                     if (response.data?.success) {
                         const fetchedCallFollowUps = response.data.data || [];
-                        console.log("fetchedCallFollowUps", fetchedCallFollowUps);
                         setCallFollowUps(fetchedCallFollowUps);
 
-                        // Process events for the calendar based on callRescheduledDate
-                        const dateCountMap = {};
-                        fetchedCallFollowUps.forEach(followUp => {
-                            const dateStr = moment(followUp.callRescheduledDate).format('YYYY-MM-DD');
-                            dateCountMap[dateStr] = (dateCountMap[dateStr] || 0) + 1;
-                        });
+                        if (fetchedCallFollowUps.length === 0) {
+                            setEvents([]); // ✅ empty calendar if no call follow-ups
+                        } else {
+                            const dateCountMap = {};
+                            fetchedCallFollowUps.forEach((followUp) => {
+                                if (followUp.callRescheduledDate) {
+                                    const dateStr = moment(followUp.callRescheduledDate).format("YYYY-MM-DD");
+                                    dateCountMap[dateStr] = (dateCountMap[dateStr] || 0) + 1;
+                                }
+                            });
 
-                        const callFollowUpEvents = Object.entries(dateCountMap).map(([dateStr, count]) => ({
-                            id: dateStr,
-                            title: `${count} ${count === 1 ? 'Follow-up' : 'Follow-ups'}`,
-                            start: new Date(dateStr),
-                            end: new Date(dateStr),
-                            allDay: true,
-                            count,
-                            isOverdue: moment(dateStr).isBefore(moment(), 'day')
-                        }));
+                            const callFollowUpEvents = Object.entries(dateCountMap).map(
+                                ([dateStr, count]) => ({
+                                    id: dateStr,
+                                    title: `${count} ${count === 1 ? "Follow-up" : "Follow-ups"}`,
+                                    start: new Date(dateStr),
+                                    end: new Date(dateStr),
+                                    allDay: true,
+                                    count,
+                                    isOverdue: moment(dateStr).isBefore(moment(), "day"),
+                                })
+                            );
 
-                        setEvents(callFollowUpEvents);
+                            setEvents(callFollowUpEvents);
+                        }
+                    } else {
+                        setEvents([]); // fallback if success is false
                     }
                 }
             } catch (err) {
-                setError(err.message || 'Failed to fetch follow-ups');
-                console.error('Error fetching follow-ups:', err);
+                setError(err.message || "Failed to fetch follow-ups");
+                console.error("Error fetching follow-ups:", err.response.data.message);
+                setEvents([]); // ✅ prevent crash, still show empty calendar
             } finally {
                 setLoading(false);
             }
         };
 
         fetchFollowUps();
-    }, [selectedTab]); // Re-fetch data when tab changes
+    }, [selectedTab]);
 
     const handleSelectSlot = (slotInfo) => {
         const dateStr = moment(slotInfo.start).format('YYYY-MM-DD');
@@ -248,7 +269,7 @@ const FollowUpCalendar = () => {
         );
     }
 
-    if (error) return <div className="alert alert-danger">Error: {error}</div>;
+    // if (error) return <div className="alert alert-danger">Error: {error}</div>;
 
     return (
         <Container className="py-4">
