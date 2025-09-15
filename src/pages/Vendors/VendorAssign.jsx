@@ -581,10 +581,13 @@ const VendorAssign = () => {
           setAssistantLoadingMap((m) => ({ ...m, [serviceName]: false }));
         }
       }
+
+      window.location.reload();
     } catch (err) {
       console.error("Assign assistant error:", err);
       toast.error("Failed to assign assistant");
     }
+
   };
 
   if (loading || !quotation) {

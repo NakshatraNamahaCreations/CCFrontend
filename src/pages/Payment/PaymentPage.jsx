@@ -90,7 +90,6 @@
 //     note: "",
 //   });
 
-
 //   // Predefined slots
 //   const timeSlots = [
 //     "Morning (8AM - 1PM)",
@@ -863,8 +862,6 @@
 
 // export default PaymentPage;
 
-
-
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -877,7 +874,8 @@ import {
   Modal,
   Tab,
   Tabs,
-  OverlayTrigger, Tooltip
+  OverlayTrigger,
+  Tooltip,
 } from "react-bootstrap";
 import Select from "react-select";
 import { IoChevronForward } from "react-icons/io5";
@@ -886,7 +884,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import DynamicPagination from "../DynamicPagination";
-import { FaEye } from "react-icons/fa";  // eye icon
+import { FaEye } from "react-icons/fa"; // eye icon
 
 // ---- Date helpers: handle "DD-MM-YYYY" and ISO strings ----
 const parseMaybeDdmmyyyy = (str) => {
@@ -923,7 +921,7 @@ const PaymentPage = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [vendorOptions, setVendorOptions] = useState([]);
+  // const [vendorOptions, setVendorOptions] = useState([]);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -938,17 +936,32 @@ const PaymentPage = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Vendor payment modal state
-  const [showVendorModal, setShowVendorModal] = useState(false);
-  const [vendorPayment, setVendorPayment] = useState({
-    vendorName: "",
-    vendorId: "",
-    eventDate: "",
-    slot: "",
-    totalAmount: "",
-    paidAmount: "",
-    paidDate: "",
+  // Pay Modal state
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [payingVendor, setPayingVendor] = useState(null);
+  const [payForm, setPayForm] = useState({
+    paymentDate: "",
+    paymentMode: "",
   });
+
+  // Client tab
+  const [clientSearchInput, setClientSearchInput] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientPage, setClientPage] = useState(1);
+  const [clientTotalPages, setClientTotalPages] = useState(1);
+
+  // Vendor Pending tab
+  const [vendorPendingSearchInput, setVendorPendingSearchInput] = useState("");
+  const [vendorPendingSearch, setVendorPendingSearch] = useState("");
+  const [vendorPendingPage, setVendorPendingPage] = useState(1);
+  const [vendorPendingTotalPages, setVendorPendingTotalPages] = useState(1);
+
+  // Vendor Completed tab
+  const [vendorCompletedSearchInput, setVendorCompletedSearchInput] =
+    useState("");
+  const [vendorCompletedSearch, setVendorCompletedSearch] = useState("");
+  const [vendorCompletedPage, setVendorCompletedPage] = useState(1);
+  const [vendorCompletedTotalPages, setVendorCompletedTotalPages] = useState(1);
 
   // Add payment modal state
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
@@ -959,34 +972,7 @@ const PaymentPage = () => {
     note: "",
   });
 
-
-  // Predefined slots
-  const timeSlots = [
-    "Morning (8AM - 1PM)",
-    "Afternoon (12PM - 5PM)",
-    "Evening (5PM - 9PM)",
-    "Midnight (9PM - 12AM)",
-
-  ];
-
-  // Fetch vendor options from API
-  const fetchVendorOptions = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/vendors");
-      if (response.data.success && response.data.vendors) {
-        const options = response.data.vendors.map((vendor) => ({
-          value: vendor._id,
-          label: vendor.name,
-          data: vendor,
-        }));
-        setVendorOptions(options);
-      }
-    } catch (err) {
-      toast.error("Failed to fetch vendors");
-    }
-  };
-
-  // Fetch payments with pagination, search, and date filter
+  // Client Payments
   const fetchPayments = async () => {
     setLoading(true);
     try {
@@ -994,11 +980,12 @@ const PaymentPage = () => {
       const formattedStartDate = formatDateForAPI(startDate);
       const formattedEndDate = formatDateForAPI(endDate);
 
-      const url = `http://localhost:5000/api/payments/completed?page=${currentPage}&limit=10&search=${encodeURIComponent(
-        search
+      const url = `http://localhost:5000/api/payments/completed?page=${clientPage}&limit=10&search=${encodeURIComponent(
+        clientSearch || ""
       )}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
 
       const response = await axios.get(url);
+
       const paymentsData = response.data.data || [];
 
       const paymentList = paymentsData.map((p, index) => {
@@ -1026,23 +1013,24 @@ const PaymentPage = () => {
       });
 
       setPayments(paymentList);
-      setTotalPages(response.data.totalPages || 1);
-      setError("");
+      setClientTotalPages(response.data.totalPages || 1);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "Failed to fetch payments";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      console.error("Error fetching payments:", err);
+      toast.error(err.response?.data?.message || "Failed to fetch payments");
+      setPayments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch vendor payments
-  const fetchVendorPayments = async () => {
+  // Vendors (Pending / Completed)
+  const fetchVendorPayments = async (status, page, search) => {
     setVendorLoading(true);
     try {
-      const url = `http://localhost:5000/api/vendors/vendor-payments`;
+      const url = `http://localhost:5000/api/vendors/vendor-payments?status=${status}&page=${page}&limit=10&search=${encodeURIComponent(
+        search || ""
+      )}`;
+
       const response = await axios.get(url);
 
       if (response.data.success && response.data.data) {
@@ -1053,88 +1041,118 @@ const PaymentPage = () => {
             ...details,
           })
         );
+
         setVendors(vendorArray);
+
+        // update total pages based on tab
+        if (status === "Pending") {
+          setVendorPendingTotalPages(response.data.pagination?.totalPages || 1);
+        } else if (status === "Completed") {
+          setVendorCompletedTotalPages(
+            response.data.pagination?.totalPages || 1
+          );
+        }
+      } else {
+        toast.error("No vendor payment data found");
+        setVendors([]);
       }
     } catch (err) {
-      toast.error("Failed to fetch vendor payments");
+      console.error("Error fetching vendor payments:", err);
+      toast.error(
+        err.response?.data?.message || "Failed to fetch vendor payments"
+      );
+      setVendors([]);
     } finally {
       setVendorLoading(false);
     }
   };
 
-
+  // Client
   useEffect(() => {
-    if (activeTab === "client") {
-      fetchPayments();
-    }
-  }, [currentPage, search, startDate, endDate, activeTab]);
+    if (activeTab === "client") fetchPayments();
+  }, [clientPage, clientSearch, startDate, endDate, activeTab]);
 
+  // Vendor Pending
   useEffect(() => {
-    if (activeTab === "vendor") {
-      fetchVendorPayments();
-      fetchVendorOptions();
-    }
-  }, [vendorCurrentPage, activeTab]);
+    if (activeTab === "vendor pending")
+      fetchVendorPayments("Pending", vendorPendingPage, vendorPendingSearch);
+  }, [vendorPendingPage, vendorPendingSearch, activeTab]);
 
-  const handleSearch = (e) => {
+  // Vendor Completed
+  useEffect(() => {
+    if (activeTab === "vendor completed")
+      fetchVendorPayments(
+        "Completed",
+        vendorCompletedPage,
+        vendorCompletedSearch
+      );
+  }, [vendorCompletedPage, vendorCompletedSearch, activeTab]);
+
+  // Client
+  const handleClientSearch = (e) => {
     e.preventDefault();
-    setSearch(searchInput);
-    setCurrentPage(1);
+    setClientSearch(clientSearchInput);
+    setClientPage(1);
+  };
+  const handleClientClear = () => {
+    setClientSearchInput("");
+    setClientSearch("");
+    setClientPage(1);
   };
 
-  const handleClearSearch = () => {
-    setSearchInput("");
-    setSearch("");
-    setCurrentPage(1);
+  // Vendor Pending
+  const handleVendorPendingSearch = (e) => {
+    e.preventDefault();
+    setVendorPendingSearch(vendorPendingSearchInput);
+    setVendorPendingPage(1);
+  };
+  const handleVendorPendingClear = () => {
+    setVendorPendingSearchInput("");
+    setVendorPendingSearch("");
+    setVendorPendingPage(1);
   };
 
-  // Handle vendor selection
-  const handleVendorSelect = (selectedOption) => {
-    if (selectedOption) {
-      setVendorPayment({
-        ...vendorPayment,
-        vendorName: selectedOption.label,
-        vendorId: selectedOption.value,
-      });
-    } else {
-      setVendorPayment({
-        ...vendorPayment,
-        vendorName: "",
-        vendorId: "",
-      });
+  // Vendor Completed
+  const handleVendorCompletedSearch = (e) => {
+    e.preventDefault();
+    setVendorCompletedSearch(vendorCompletedSearchInput);
+    setVendorCompletedPage(1);
+  };
+  const handleVendorCompletedClear = () => {
+    setVendorCompletedSearchInput("");
+    setVendorCompletedSearch("");
+    setVendorCompletedPage(1);
+  };
+
+  const handlePayVendorSubmit = async () => {
+    if (!payForm.paymentDate || !payForm.paymentMode) {
+      toast.error("All fields are required");
+      return;
     }
-  };
 
-
-
-  // Handle add payment to existing vendor payment
-  const handleAddPayment = async () => {
     try {
-      if (!additionalPayment.amount || !additionalPayment.paymentDate) {
-        toast.error("Please fill amount and payment date");
-        return;
-      }
+      // pick the first event for now (or you can loop if you want all)
+      const event = payingVendor.events[0];
 
-      await axios.post(
-        `http://localhost:5000/api/vendor-payments/${selectedVendorPayment._id}/payments`,
+      console.log("event", event);
+
+      await axios.put(
+        `http://localhost:5000/api/vendors/pay-vendor/${payingVendor.vendorId}`,
         {
-          amount: parseFloat(additionalPayment.amount),
-          paymentDate: additionalPayment.paymentDate,
-          note: additionalPayment.note || "Additional payment",
+          paymentMode: payForm.paymentMode,
+          paymentDate: payForm.paymentDate,
         }
       );
-      toast.success("Payment added successfully");
-      setShowAddPaymentModal(false);
-      setAdditionalPayment({ amount: "", paymentDate: "", note: "" });
-      setSelectedVendorPayment(null);
 
-      // Refresh vendor payments list
-      fetchVendorPayments();
+      toast.success("Vendor paid successfully");
+      setShowPayModal(false);
+      setPayingVendor(null);
+      fetchVendorPayments("Pending", vendorPendingPage, vendorPendingSearch);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to add payment");
+      console.error("Pay vendor error:", err);
+      toast.error("Failed to pay vendor");
     }
   };
-
 
   // Fetch full report for Excel download
   const handleDownloadExcel = async () => {
@@ -1158,8 +1176,9 @@ const PaymentPage = () => {
           ? completed[completed.length - 1].dueDate
           : null;
 
+ 
         return {
-          "Quotation ID": p.quotationId,
+          "Quotation ID": p.quotationNumber,
           "Lead ID": p.leadId,
           "Query ID": p.queryId,
           "Customer Name": p.firstPersonName,
@@ -1184,12 +1203,49 @@ const PaymentPage = () => {
     }
   };
 
-  // Clear date filters
-  const handleClearDates = () => {
-    setStartDate("");
-    setEndDate("");
-    setCurrentPage(1);
+  // Vendor Excel download (Pending / Completed)
+  const handleDownloadVendorExcel = async (status, search) => {
+    try {
+      const url = `http://localhost:5000/api/vendors/vendor-payments?status=${status}&search=${encodeURIComponent(
+        search || ""
+      )}&all=true`;
+
+      const response = await axios.get(url);
+      const vendorData = response.data.data || [];
+
+      // Convert object → array
+      const vendorArray = Object.entries(vendorData).map(
+        ([vendorId, details]) => ({
+          vendorId,
+          ...details,
+        })
+      );
+
+      const worksheetData = vendorArray.map((v) => ({
+        "Vendor Name": v.vendorName,
+        "Vendor Category": v.vendorCategory,
+        "Total Salary": v.totalSalary,
+        Events: (v.events || [])
+          .map(
+            (e) =>
+              `${e.quoteId} - ${e.categoryName} - ${
+                e.serviceName
+              } - ${toDisplayDate(e.eventDate)} - ${e.slot} - ₹${e.salary}`
+          )
+          .join("; "),
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, `${status} Vendors`);
+      XLSX.writeFile(workbook, `${status}VendorPayments.xlsx`);
+
+      toast.success(`${status} vendor payments downloaded`);
+    } catch (err) {
+      toast.error("Failed to download vendor Excel");
+    }
   };
+
   return (
     <div
       className="container py-2 rounded vh-100"
@@ -1201,38 +1257,24 @@ const PaymentPage = () => {
         onSelect={(tab) => setActiveTab(tab)}
         className="mb-3"
       >
-        <Tab eventKey="client" title="Client Payments" >
+        <Tab eventKey="client" title="Client Payments">
           {/* Search and Date Filters */}
-          <div className="mb-3 d-flex flex-wrap justify-content-between">
-            <Form
-              onSubmit={handleSearch}
-              className="mb-2"
-              style={{ width: "350px" }}
-            >
-              <InputGroup>
-                <Form.Control
-                  type="text"
-                  placeholder="Search by name or phone"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  disabled={loading}
-                />
-                <Button variant="dark" type="submit" disabled={loading}>
-                  Search
-                </Button>
-                {search && (
-                  <Button
-                    variant="outline-secondary"
-                    onClick={handleClearSearch}
-                    disabled={loading}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </InputGroup>
-            </Form>
-          </div>
-
+          <Form onSubmit={handleClientSearch} style={{ width: "350px" }}>
+            <InputGroup>
+              <Form.Control
+                type="text"
+                placeholder="Search by name or phone"
+                value={clientSearchInput}
+                onChange={(e) => setClientSearchInput(e.target.value)}
+              />
+              <Button type="submit" variant="dark">
+                Search
+              </Button>
+              {clientSearch && (
+                <Button onClick={handleClientClear}>Clear</Button>
+              )}
+            </InputGroup>
+          </Form>
           {/* Top Right Actions */}
           <div className="d-flex justify-content-end mb-2 gap-2">
             <Button
@@ -1255,7 +1297,7 @@ const PaymentPage = () => {
             >
               <Table className="table table-hover align-middle">
                 <thead
-                  className="text-white text-center sticky-top"
+                  className="text-white sticky-top"
                   style={{ backgroundColor: "#343a40" }}
                 >
                   <tr style={{ fontSize: "14px" }}>
@@ -1270,10 +1312,7 @@ const PaymentPage = () => {
                     <th></th>
                   </tr>
                 </thead>
-                <tbody
-                  style={{ fontSize: "12px", textAlign: "center" }}
-                  className="fw-semibold"
-                >
+                <tbody style={{ fontSize: "12px" }} className="fw-semibold">
                   {payments.length === 0 && !loading ? (
                     <tr>
                       <td colSpan="8" className="text-center">
@@ -1299,10 +1338,11 @@ const PaymentPage = () => {
                         <td>{payment.amount}</td>
                         <td>
                           <span
-                            className={`badge bg-${payment.status === "Completed"
-                              ? "success"
-                              : "warning"
-                              }`}
+                            className={`badge bg-${
+                              payment.status === "Completed"
+                                ? "success"
+                                : "warning"
+                            }`}
                           >
                             {payment.status}
                           </span>
@@ -1321,17 +1361,40 @@ const PaymentPage = () => {
 
           {/* Pagination */}
           <DynamicPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            currentPage={clientPage}
+            totalPages={clientTotalPages}
+            onPageChange={setClientPage}
           />
         </Tab>
 
-        <Tab eventKey="vendor" title="Vendor Payments">
-          {/* Add Vendor Payment Button */}
-          <div className="d-flex justify-content-end mb-3">
-            <Button variant="dark" onClick={() => setShowVendorModal(true)}>
-              Add Vendor Payment
+        <Tab eventKey="vendor pending" title="Vendor Pending Payments">
+          {/* Search and Date Filters */}
+          <Form onSubmit={handleVendorPendingSearch} style={{ width: "350px" }}>
+            <InputGroup>
+              <Form.Control
+                type="text"
+                placeholder="Search by Vendor name"
+                value={vendorPendingSearchInput}
+                onChange={(e) => setVendorPendingSearchInput(e.target.value)}
+              />
+              <Button type="submit" variant="dark">
+                Search
+              </Button>
+              {vendorPendingSearch && (
+                <Button onClick={handleVendorPendingClear}>Clear</Button>
+              )}
+            </InputGroup>
+          </Form>
+          <div className="d-flex justify-content-end mb-2 gap-2">
+            <Button
+              variant="light-gray"
+              className="btn rounded-5 bg-white border-2 shadow-sm"
+              style={{ fontSize: "14px" }}
+              onClick={() =>
+                handleDownloadVendorExcel("Pending", vendorPendingSearch)
+              }
+            >
+              Download Excel
             </Button>
           </div>
 
@@ -1344,20 +1407,18 @@ const PaymentPage = () => {
             >
               <Table className="table table-hover align-middle">
                 <thead
-                  className="text-white text-center sticky-top"
+                  className="text-white sticky-top"
                   style={{ backgroundColor: "#343a40" }}
                 >
                   <tr style={{ fontSize: "14px" }}>
                     <th>Sl.No</th>
                     <th>Vendor Name</th>
+                    <th>Vendor Type</th>
                     <th>Total Salary</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody
-                  style={{ fontSize: "12px", textAlign: "center" }}
-                  className="fw-semibold"
-                >
+                <tbody style={{ fontSize: "12px" }} className="fw-semibold">
                   {vendors.length === 0 && !vendorLoading ? (
                     <tr>
                       <td colSpan="4" className="text-center">
@@ -1369,11 +1430,16 @@ const PaymentPage = () => {
                       <tr key={vendor.vendorId}>
                         <td>{index + 1}</td>
                         <td>{vendor.vendorName}</td>
+                        <td>{vendor.vendorCategory}</td>
                         <td>₹{vendor.totalSalary?.toLocaleString("en-IN")}</td>
                         <td>
                           <OverlayTrigger
                             placement="top"
-                            overlay={<Tooltip id={`tooltip-view-${vendor.vendorId}`}>View Details</Tooltip>}
+                            overlay={
+                              <Tooltip id={`tooltip-view-${vendor.vendorId}`}>
+                                View Details
+                              </Tooltip>
+                            }
                           >
                             <Button
                               variant="outline-dark"
@@ -1390,6 +1456,11 @@ const PaymentPage = () => {
                             variant="outline-success"
                             size="sm"
                             className="ms-2"
+                            onClick={() => {
+                              setPayingVendor(vendor);
+                              setPayForm({ paymentDate: "", paymentMode: "" });
+                              setShowPayModal(true);
+                            }}
                           >
                             Pay
                           </Button>
@@ -1404,9 +1475,115 @@ const PaymentPage = () => {
 
           {/* Vendor Payments Pagination */}
           <DynamicPagination
-            currentPage={vendorCurrentPage}
-            totalPages={vendorTotalPages}
-            onPageChange={setVendorCurrentPage}
+            currentPage={vendorPendingPage}
+            totalPages={vendorPendingTotalPages}
+            onPageChange={setVendorPendingPage}
+          />
+        </Tab>
+
+        <Tab eventKey="vendor completed" title="Vendor Completed Payments">
+          {/* Search and Date Filters */}
+          <Form
+            onSubmit={handleVendorCompletedSearch}
+            style={{ width: "350px" }}
+          >
+            <InputGroup>
+              <Form.Control
+                type="text"
+                placeholder="Search by Vendor name"
+                value={vendorCompletedSearchInput}
+                onChange={(e) => setVendorCompletedSearchInput(e.target.value)}
+              />
+              <Button type="submit" variant="dark">
+                Search
+              </Button>
+              {vendorCompletedSearch && (
+                <Button onClick={handleVendorCompletedClear}>Clear</Button>
+              )}
+            </InputGroup>
+          </Form>
+
+          <div className="d-flex justify-content-end mb-2 gap-2">
+            <Button
+              variant="light-gray"
+              className="btn rounded-5 bg-white border-2 shadow-sm"
+              style={{ fontSize: "14px" }}
+              onClick={() =>
+                handleDownloadVendorExcel("Completed", vendorCompletedSearch)
+              }
+            >
+              Download Excel
+            </Button>
+          </div>
+
+          {/* Vendor Payments Table */}
+          <Card className="border-0 p-3 my-3">
+            {vendorLoading && <p>Loading vendor payments...</p>}
+            <div
+              className="table-responsive bg-white"
+              style={{ maxHeight: "65vh", overflowY: "auto" }}
+            >
+              <Table className="table table-hover align-middle">
+                <thead
+                  className="text-white  sticky-top"
+                  style={{ backgroundColor: "#343a40" }}
+                >
+                  <tr style={{ fontSize: "14px" }}>
+                    <th>Sl.No</th>
+                    <th>Vendor Name</th>
+                    <th>Vendor Type</th>
+                    <th>Total Salary</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: "12px" }} className="fw-semibold">
+                  {vendors.length === 0 && !vendorLoading ? (
+                    <tr>
+                      <td colSpan="4" className="text-center">
+                        No vendor payments found
+                      </td>
+                    </tr>
+                  ) : (
+                    vendors.map((vendor, index) => (
+                      <tr key={vendor.vendorId}>
+                        <td>{index + 1}</td>
+                        <td>{vendor.vendorName}</td>
+                        <td>{vendor.vendorCategory}</td>
+                        <td>₹{vendor.totalSalary?.toLocaleString("en-IN")}</td>
+                        <td>
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id={`tooltip-view-${vendor.vendorId}`}>
+                                View Details
+                              </Tooltip>
+                            }
+                          >
+                            <Button
+                              variant="outline-dark"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVendorPayment(vendor);
+                                setShowAddPaymentModal(true);
+                              }}
+                            >
+                              <FaEye />
+                            </Button>
+                          </OverlayTrigger>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* Vendor Payments Pagination */}
+          <DynamicPagination
+            currentPage={vendorCompletedPage}
+            totalPages={vendorCompletedTotalPages}
+            onPageChange={setVendorCompletedPage}
           />
         </Tab>
       </Tabs>
@@ -1422,7 +1599,9 @@ const PaymentPage = () => {
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title style={{ fontSize: "16px" }}>Vendor Payment Details</Modal.Title>
+          <Modal.Title style={{ fontSize: "16px" }}>
+            Vendor Payment Details
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedVendorPayment && (
@@ -1442,6 +1621,7 @@ const PaymentPage = () => {
                 <thead>
                   <tr>
                     <th>Quotation ID</th>
+                    <th>Category</th>
                     <th>Service</th>
                     <th>Date</th>
                     <th>Slot</th>
@@ -1452,6 +1632,7 @@ const PaymentPage = () => {
                   {selectedVendorPayment.events.map((e, i) => (
                     <tr key={i}>
                       <td>{e.quoteId}</td>
+                      <td>{e.categoryName}</td>
                       <td>{e.serviceName}</td>
                       <td>{toDisplayDate(e.eventDate)}</td>
                       <td>{e.slot}</td>
@@ -1476,12 +1657,85 @@ const PaymentPage = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* Pay Vendor Modal */}
+      <Modal
+        show={showPayModal}
+        onHide={() => {
+          setShowPayModal(false);
+          setPayingVendor(null);
+        }}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: "16px" }}>Pay Vendor</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {payingVendor && (
+            <Form>
+              <div className="mb-3">
+                <strong>Vendor:</strong> {payingVendor.vendorName}
+              </div>
+              <div className="mb-3">
+                <strong>Total Salary:</strong> ₹
+                {payingVendor.totalSalary?.toLocaleString("en-IN")}
+              </div>
 
+              {/* Payment Date */}
+              <Form.Group className="mb-3">
+                <Form.Label>Payment Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={payForm.paymentDate}
+                  onChange={(e) =>
+                    setPayForm((prev) => ({
+                      ...prev,
+                      paymentDate: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </Form.Group>
+
+              {/* Payment Mode */}
+              <Form.Group className="mb-3">
+                <Form.Label>Payment Mode</Form.Label>
+                <Form.Select
+                  value={payForm.paymentMode}
+                  onChange={(e) =>
+                    setPayForm((prev) => ({
+                      ...prev,
+                      paymentMode: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Select Mode</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cheque">Cheque</option>
+                </Form.Select>
+              </Form.Group>
+            </Form>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowPayModal(false);
+              setPayingVendor(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button variant="dark" onClick={handlePayVendorSubmit}>
+            Submit
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
 export default PaymentPage;
-
-
-
