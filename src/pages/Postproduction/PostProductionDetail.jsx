@@ -386,20 +386,38 @@ const PostProductionDetail = () => {
   }, [id]);
 
 
-  const handleRowClick = (event) => {
-    if (!data) return;
+  // const handleRowClick = (unit) => {
+  //   if (!data) return;
+  //   navigate(`/post-production/post-production-detail/assign-task`, {
+  //     state: {
+  //       id: unit._id,
+  //       // Backward-compat keys expected by downstream screens
+  //       eventId: unit.packageId,
+  //       eventName: unit.packageName,
+  //       totalPhotos: unit.noOfPhotos,
+  //       totalVideos: unit.noOfVideos,
+  //       quotationId: data.quotationId,
+  //       editingStatus: unit.editingStatus,
+  //       // Service-unit specific context
+  //       packageId: unit.packageId,
+  //       packageName: unit.packageName,
+  //       serviceId: unit.serviceId,
+  //       serviceName: unit.serviceName,
+  //       unitIndex: unit.unitIndex,
+  //     },
+  //   });
+  // };
+
+  const handleRowClick = (unit) => {
+    // if (!data) return;
     navigate(`/post-production/post-production-detail/assign-task`, {
       state: {
-        id: data._id,
-        eventId: event.eventId,
-        eventName: event.eventName,
-        totalPhotos: event.noOfPhotos,
-        totalVideos: event.noOfVideos,
-        quotationId: data.quotationId,
-        editingStatus: event.editingStatus,
+        collectedDataId: data._id,
+        serviceUnitId: unit._id,
       },
     });
   };
+
 
   // --- helpers ---
   const fmt = (n) => (n == null ? "-" : `₹${Number(n).toLocaleString()}`);
@@ -623,9 +641,9 @@ const PostProductionDetail = () => {
         </Card>
       ) : null}
 
-      {/* Event Details Table */}
+      {/* Service Unit Details Table */}
       <Card className="shadow-sm">
-        <Card.Header className="fw-bold bg-light">Event-wise Details</Card.Header>
+        <Card.Header className="fw-bold bg-light">Service Unit Details</Card.Header>
         <Card.Body className="p-0">
           <Table
             bordered
@@ -637,7 +655,9 @@ const PostProductionDetail = () => {
             <thead className="table-light">
               <tr>
                 <th>Sl.No</th>
-                <th>Event Name</th>
+                <th>Event</th>
+                <th>Service</th>
+                <th>Unit</th>
                 <th>Camera Name</th>
                 <th>Drive Size</th>
                 <th>Filled Size</th>
@@ -651,10 +671,10 @@ const PostProductionDetail = () => {
               </tr>
             </thead>
             <tbody>
-              {data.events.map((ev, idx) => (
+              {(data.serviceUnits || []).map((u, idx) => (
                 <tr
-                  key={ev._id || idx}
-                  onClick={() => handleRowClick(ev)}
+                  key={u._id || idx}
+                  onClick={() => handleRowClick(u)}
                   style={{ transition: "background-color 0.2s" }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.backgroundColor = "#f8f9fa")
@@ -664,27 +684,29 @@ const PostProductionDetail = () => {
                   }
                 >
                   <td>{String(idx + 1).padStart(2, "0")}</td>
-                  <td>{ev.eventName}</td>
-                  <td>{ev.cameraName}</td>
-                  <td>{ev.totalDriveSize}</td>
-                  <td>{ev.filledSize}</td>
-                  <td>{ev.copyingPerson}</td>
-                  <td>{ev.copiedLocation}</td>
-                  <td className="text-center">{ev.noOfPhotos}</td>
-                  <td className="text-center">{ev.noOfVideos}</td>
-                  <td>{dayjs(ev.submissionDate).format("DD-MM-YYYY")}</td>
-                  <td>{ev.notes}</td>
+                  <td>{u.packageName}</td>
+                  <td>{u.serviceName}</td>
+                  <td className="text-center">{typeof u.unitIndex === 'number' ? u.unitIndex + 1 : '-'}</td>
+                  <td>{u.cameraName}</td>
+                  <td>{u.totalDriveSize}</td>
+                  <td>{u.filledSize}</td>
+                  <td>{u.copyingPerson}</td>
+                  <td>{u.copiedLocation}</td>
+                  <td className="text-center">{u.noOfPhotos}</td>
+                  <td className="text-center">{u.noOfVideos}</td>
+                  <td>{u.submissionDate ? dayjs(u.submissionDate).format("DD-MM-YYYY") : '-'}</td>
+                  <td>{u.notes}</td>
                   <td className="text-center">
                     <Badge
                       bg={
-                        ev.editingStatus === "Completed"
+                        u.editingStatus === "Completed"
                           ? "success"
-                          : ev.editingStatus === "In Process"
+                          : u.editingStatus === "In Process"
                             ? "warning"
                             : "secondary"
                       }
                     >
-                      {ev.editingStatus}
+                      {u.editingStatus}
                     </Badge>
                   </td>
                 </tr>
@@ -698,3 +720,6 @@ const PostProductionDetail = () => {
 };
 
 export default PostProductionDetail;
+
+
+

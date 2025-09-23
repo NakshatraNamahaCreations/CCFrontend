@@ -110,11 +110,11 @@
 //           taskDescription: taskDetails.taskDescription,
 //           completionDate: taskDetails.completionDate,
 //           photosAssigned:
-//             selectedService !== "Video Editing"
+//             selectedService !== "Video Sorting"
 //               ? Number(taskDetails.numPhotos) || 0
 //               : 0,
 //           videosAssigned:
-//             selectedService !== "Photo Editing"
+//             selectedService !== "Photo Sorting"
 //               ? Number(taskDetails.numVideos) || 0
 //               : 0,
 //         },
@@ -180,7 +180,7 @@
 //               </tr>
 //             </thead>
 //             <tbody>
-//               {["Photo Editing", "Video Editing", "Photo & Video Editing"].map(
+//               {["Photo Sorting", "Video Sorting", "Photo & Video Sorting"].map(
 //                 (type, idx) => (
 //                   <tr key={type}>
 //                     <td>{String(idx + 1).padStart(2, "0")}</td>
@@ -289,9 +289,9 @@
 //                   }
 //                 />
 //               </Form.Group>
-//               {selectedService !== "Video Editing" && (
+//               {selectedService !== "Video Sorting" && (
 //                 <Form.Group className="mb-3">
-//                   <Form.Label>No. of Photos to Edit</Form.Label>
+//                   <Form.Label>No. of Photos to sort</Form.Label>
 //                   <Form.Control
 //                     type="number"
 //                     value={taskDetails.numPhotos}
@@ -304,7 +304,7 @@
 //                   />
 //                 </Form.Group>
 //               )}
-//               {selectedService !== "Photo Editing" && (
+//               {selectedService !== "Photo Sorting" && (
 //                 <Form.Group className="mb-3">
 //                   <Form.Label>No. of Videos to Edit</Form.Label>
 //                   <Form.Control
@@ -337,6 +337,434 @@
 
 // export default EventServicesTable;
 
+// import React, { useEffect, useState } from "react";
+// import axios from "axios";
+// import { useLocation, useNavigate } from "react-router-dom";
+// import {
+//   Table,
+//   Button,
+//   Card,
+//   Modal,
+//   Form,
+//   OverlayTrigger,
+//   Tooltip,
+// } from "react-bootstrap";
+// import { FaTasks, FaEye, FaCheck, FaSpinner } from "react-icons/fa";
+// import Select from "react-select";
+
+// const STATUS_OPTIONS = ["Pending", "In Process", "Completed"];
+
+// const EventServicesTable = () => {
+//   const location = useLocation();
+//   const {
+//     id: collectedDataId, // <-- we passed id: data._id from previous screen
+//     eventId,
+//     eventName,
+//     totalPhotos = 0,
+//     totalVideos = 0,
+//     quotationId,
+//     editingStatus // (optional) if you decide to pass it later
+//   } = location.state || {};
+//   const navigate = useNavigate();
+
+//   const [vendors, setVendors] = useState([]);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedService, setSelectedService] = useState("");
+//   const [taskDetails, setTaskDetails] = useState({
+//     vendorId: "",
+//     vendorName: "",
+//     taskDescription: "",
+//     completionDate: "",
+//     numPhotos: "",
+//     numVideos: "",
+//   });
+
+//   const [assignedCounts, setAssignedCounts] = useState({
+//     assignedPhotos: 0,
+//     assignedVideos: 0,
+//   });
+
+//   // --- status state & updater ---
+//   const [selectedStatus, setSelectedStatus] = useState(location.state?.editingStatus || "Pending");
+
+//   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+//   const fetchVendors = async () => {
+//     try {
+//       const res = await axios.get("http://localhost:5000/api/vendors/inhouse");
+//       if (res.data.success) {
+//         const formattedVendors = res.data.data.map((vendor) => ({
+//           value: vendor._id,
+//           label: vendor.name,
+//           ...vendor,
+//         }));
+//         setVendors(formattedVendors);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching vendors:", error);
+//     }
+//   };
+
+//   const fetchAssignedCounts = async () => {
+//     try {
+//       const res = await axios.get(
+//         "http://localhost:5000/api/task/assigned-counts",
+//         { params: { quotationId, eventId } }
+//       );
+//       if (res.data.success) {
+//         setAssignedCounts(res.data.data);
+//       } else {
+//         setAssignedCounts({ assignedPhotos: 0, assignedVideos: 0 });
+//       }
+//     } catch (error) {
+//       console.error("Error fetching assigned counts:", error);
+//       setAssignedCounts({ assignedPhotos: 0, assignedVideos: 0 });
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (quotationId && eventId) {
+//       fetchAssignedCounts();
+//     }
+//   }, [quotationId, eventId]);
+
+//   const handleOpenModal = (serviceType) => {
+//     setSelectedService(serviceType);
+//     setShowModal(true);
+//     fetchVendors();
+//   };
+
+//   const handleCloseModal = () => {
+//     setShowModal(false);
+//     setTaskDetails({
+//       vendorId: "",
+//       vendorName: "",
+//       taskDescription: "",
+//       completionDate: "",
+//       numPhotos: "",
+//       numVideos: "",
+//     });
+//   };
+
+//   const handleAssignTask = async () => {
+//     const payload = {
+//       quotationId,
+//       eventId,
+//       eventName,
+//       totalPhotos,
+//       totalVideos,
+//       assignments: [
+//         {
+//           serviceName: selectedService,
+//           vendorId: taskDetails.vendorId,
+//           vendorName: taskDetails.vendorName,
+//           taskDescription: taskDetails.taskDescription,
+//           completionDate: taskDetails.completionDate,
+//           photosAssigned:
+//             selectedService !== "Video Sorting"
+//               ? Number(taskDetails.numPhotos) || 0
+//               : 0,
+//           videosAssigned:
+//             selectedService !== "Photo Sorting"
+//               ? Number(taskDetails.numVideos) || 0
+//               : 0,
+//         },
+//       ],
+//     };
+
+//     try {
+//       const res = await axios.post(
+//         "http://localhost:5000/api/task/assign-task",
+//         payload
+//       );
+//       if (res.data.success) {
+//         alert("Task assigned successfully!");
+//         handleCloseModal();
+//         fetchAssignedCounts();
+//       } else {
+//         alert(res.data.message || "Failed to assign task");
+//       }
+//     } catch (error) {
+//       console.error("Error assigning task:", error);
+//       alert(
+//         error.response?.data?.message ||
+//         error.message ||
+//         "Failed to assign task"
+//       );
+//     }
+//   };
+
+//   const handleVendorChange = (selectedOption) => {
+//     setTaskDetails({
+//       ...taskDetails,
+//       vendorId: selectedOption.value,
+//       vendorName: selectedOption.label,
+//     });
+//   };
+
+//   // ---- NEW: Update event editing status on collected-data ----
+//   const updateEventStatus = async () => {
+//     if (!collectedDataId || !eventId) {
+//       return alert("Missing collected data id or event id.");
+//     }
+//     try {
+//       setUpdatingStatus(true);
+//       const url = `http://localhost:5000/api/collected-data/${collectedDataId}/events/${eventId}/status`;
+//       const res = await axios.put(url, { newStatus: selectedStatus });
+//       if (res.data?.success) {
+//         alert(`Status updated to ${selectedStatus}`);
+//       } else {
+//         alert(res.data?.message || "Failed to update status");
+//       }
+//     } catch (err) {
+//       console.error("Error updating status:", err);
+//       alert(
+//         err?.response?.data?.message || err.message || "Failed to update status"
+//       );
+//     } finally {
+//       setUpdatingStatus(false);
+//     }
+//   };
+
+//   const remainingPhotos =
+//     (totalPhotos || 0) - (assignedCounts.assignedPhotos || 0);
+//   const remainingVideos =
+//     (totalVideos || 0) - (assignedCounts.assignedVideos || 0);
+
+//   return (
+//     <div className="container py-4" style={{ fontSize: "13px" }}>
+//       {eventName && (
+//         <div className="mb-3">
+//           <h5>
+//             Event: <strong>{eventName}</strong>
+//           </h5>
+//           <div style={{ fontSize: "14px", marginTop: "5px" }}>
+//             📷 <strong>Total Photos:</strong> {totalPhotos} | Assigned:{" "}
+//             {assignedCounts.assignedPhotos || 0} || Remaining:{" "}
+//             {remainingPhotos < 0 ? 0 : remainingPhotos}
+//             <br />
+//             🎥 <strong>Total Videos:</strong> {totalVideos} | Assigned:{" "}
+//             {assignedCounts.assignedVideos || 0} || Remaining:{" "}
+//             {remainingVideos < 0 ? 0 : remainingVideos}
+//           </div>
+//         </div>
+//       )}
+
+//       <div className="d-flex justify-content-end align-items-center gap-2 mb-3">
+//         <span className="me-2">Update status:</span>
+//         <Form.Select
+//           size="sm"
+//           value={selectedStatus}
+//           onChange={(e) => setSelectedStatus(e.target.value)}
+//           style={{ width: 220 }}
+//         >
+//           {STATUS_OPTIONS.map((s) => (
+//             <option key={s} value={s}>
+//               {s}
+//             </option>
+//           ))}
+//         </Form.Select>
+//         <Button
+//           size="sm"
+//           variant="success"
+//           onClick={updateEventStatus}
+//           disabled={updatingStatus}
+//         >
+//           {updatingStatus ? (
+//             <>
+//               <FaSpinner className="me-1" /> Updating…
+//             </>
+//           ) : (
+//             <>
+//               <FaCheck className="me-1" /> Update
+//             </>
+//           )}
+//         </Button>
+//       </div>
+
+//       <Card className="shadow-sm">
+//         <Card.Header className="fw-bold bg-dark text-white">
+//           Editing Options
+//         </Card.Header>
+//         <Card.Body className="p-0">
+//           <Table
+//             bordered
+//             hover
+//             responsive
+//             className="mb-0"
+//             style={{ textAlign: "center" }}
+//           >
+//             <thead className="table-light">
+//               <tr>
+//                 <th>Sl.No</th>
+//                 <th>Editing Type</th>
+//                 <th>Task Actions</th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {["Photo Sorting", "Video Sorting", "Photo & Video Sorting"].map(
+//                 (type, idx) => (
+//                   <tr key={type}>
+//                     <td>{String(idx + 1).padStart(2, "0")}</td>
+//                     <td>{type}</td>
+//                     <td>
+//                       <div className="d-flex justify-content-center gap-2">
+//                         <OverlayTrigger
+//                           placement="top"
+//                           overlay={
+//                             <Tooltip id={`tooltip-assign-${idx}`}>
+//                               Assign Task
+//                             </Tooltip>
+//                           }
+//                         >
+//                           <Button
+//                             variant="light"
+//                             size="sm"
+//                             onClick={() => handleOpenModal(type)}
+//                           >
+//                             <FaTasks />
+//                           </Button>
+//                         </OverlayTrigger>
+
+//                         <OverlayTrigger
+//                           placement="top"
+//                           overlay={
+//                             <Tooltip id={`tooltip-view-${idx}`}>
+//                               View Tasks
+//                             </Tooltip>
+//                           }
+//                         >
+//                           <Button
+//                             variant="light"
+//                             size="sm"
+//                             onClick={() =>
+//                               navigate(`/assignments/${eventId}/${type}`)
+//                             }
+//                           >
+//                             <FaEye />
+//                           </Button>
+//                         </OverlayTrigger>
+//                       </div>
+//                     </td>
+//                   </tr>
+//                 )
+//               )}
+//             </tbody>
+//           </Table>
+//         </Card.Body>
+//       </Card>
+
+//       {/* Assign Task Modal */}
+//       <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
+//         <Modal.Header closeButton>
+//           <Modal.Title>Assign Task</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <div className="d-flex gap-4">
+//             <div className="flex-fill">
+//               <Form.Group className="mb-3">
+//                 <Form.Label>Event Name</Form.Label>
+//                 <Form.Control value={eventName || ""} disabled />
+//               </Form.Group>
+//               <Form.Group className="mb-3">
+//                 <Form.Label>Select Vendor</Form.Label>
+//                 <Select
+//                   options={vendors}
+//                   onChange={handleVendorChange}
+//                   placeholder="Select Vendor"
+//                   isSearchable
+//                   styles={{
+//                     control: (provided) => ({
+//                       ...provided,
+//                       minHeight: "38px",
+//                       fontSize: "14px",
+//                     }),
+//                     option: (provided) => ({
+//                       ...provided,
+//                       fontSize: "14px",
+//                     }),
+//                   }}
+//                 />
+//               </Form.Group>
+//             </div>
+//             <div className="flex-fill">
+//               <Form.Group className="mb-3">
+//                 <Form.Label>Task Description</Form.Label>
+//                 <Form.Control
+//                   as="textarea"
+//                   rows={2}
+//                   value={taskDetails.taskDescription}
+//                   onChange={(e) =>
+//                     setTaskDetails({
+//                       ...taskDetails,
+//                       taskDescription: e.target.value,
+//                     })
+//                   }
+//                 />
+//               </Form.Group>
+//               <Form.Group className="mb-3">
+//                 <Form.Label>Completion Date</Form.Label>
+//                 <Form.Control
+//                   type="date"
+//                   value={taskDetails.completionDate}
+//                   onChange={(e) =>
+//                     setTaskDetails({
+//                       ...taskDetails,
+//                       completionDate: e.target.value,
+//                     })
+//                   }
+//                 />
+//               </Form.Group>
+//               {selectedService !== "Video Sorting" && (
+//                 <Form.Group className="mb-3">
+//                   <Form.Label>No. of Photos to sort</Form.Label>
+//                   <Form.Control
+//                     type="number"
+//                     value={taskDetails.numPhotos}
+//                     onChange={(e) =>
+//                       setTaskDetails({
+//                         ...taskDetails,
+//                         numPhotos: e.target.value,
+//                       })
+//                     }
+//                   />
+//                 </Form.Group>
+//               )}
+//               {selectedService !== "Photo Sorting" && (
+//                 <Form.Group className="mb-3">
+//                   <Form.Label>No. of Videos to Edit</Form.Label>
+//                   <Form.Control
+//                     type="number"
+//                     value={taskDetails.numVideos}
+//                     onChange={(e) =>
+//                       setTaskDetails({
+//                         ...taskDetails,
+//                         numVideos: e.target.value,
+//                       })
+//                     }
+//                   />
+//                 </Form.Group>
+//               )}
+//             </div>
+//           </div>
+//         </Modal.Body>
+//         <Modal.Footer>
+//           <Button variant="secondary" onClick={handleCloseModal}>
+//             Cancel
+//           </Button>
+//           <Button variant="success" onClick={handleAssignTask}>
+//             Assign
+//           </Button>
+//         </Modal.Footer>
+//       </Modal>
+//     </div>
+//   );
+// };
+
+// export default EventServicesTable;
+
+
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -348,6 +776,8 @@ import {
   Form,
   OverlayTrigger,
   Tooltip,
+  Spinner,
+  Alert,
 } from "react-bootstrap";
 import { FaTasks, FaEye, FaCheck, FaSpinner } from "react-icons/fa";
 import Select from "react-select";
@@ -356,15 +786,7 @@ const STATUS_OPTIONS = ["Pending", "In Process", "Completed"];
 
 const EventServicesTable = () => {
   const location = useLocation();
-  const {
-    id: collectedDataId, // <-- we passed id: data._id from previous screen
-    eventId,
-    eventName,
-    totalPhotos = 0,
-    totalVideos = 0,
-    quotationId,
-    editingStatus // (optional) if you decide to pass it later
-  } = location.state || {};
+  const { collectedDataId, serviceUnitId } = location.state || {};
   const navigate = useNavigate();
 
   const [vendors, setVendors] = useState([]);
@@ -379,57 +801,97 @@ const EventServicesTable = () => {
     numVideos: "",
   });
 
+  const [serviceUnit, setServiceUnit] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [assignedCounts, setAssignedCounts] = useState({
     assignedPhotos: 0,
     assignedVideos: 0,
   });
 
-  // --- status state & updater ---
-  const [selectedStatus, setSelectedStatus] = useState(location.state?.editingStatus || "Pending");
-
+  const [selectedStatus, setSelectedStatus] = useState("Pending");
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const fetchVendors = async () => {
+  // 🔹 Fetch serviceUnit details
+  const fetchServiceUnit = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/vendors/inhouse");
+      setLoading(true);
+      setError("");
+
+      const res = await axios.get(
+        `http://localhost:5000/api/collected-data/${collectedDataId}/service-unit/${serviceUnitId}`
+      );
+
       if (res.data.success) {
-        const formattedVendors = res.data.data.map((vendor) => ({
-          value: vendor._id,
-          label: vendor.name,
-          ...vendor,
-        }));
-        setVendors(formattedVendors);
+        setServiceUnit(res.data.data.serviceUnit);
+        setSelectedStatus(res.data.data.serviceUnit.editingStatus || "Pending");
+      } else {
+        setError(res.data.message || "Failed to fetch service unit.");
       }
-    } catch (error) {
-      console.error("Error fetching vendors:", error);
+    } catch (err) {
+      console.error("Error fetching service unit:", err);
+      setError("Server error while fetching service unit.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // 🔹 Fetch vendors
+  const fetchVendors = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/vendors/vendor-by-category/inhouse");
+      if (res.data.success) {
+        const formatted = res.data.data.map((v) => ({
+          value: v._id,
+          label: v.name,
+          ...v,
+        }));
+        setVendors(formatted);
+      }
+    } catch (err) {
+      console.error("Error fetching vendors:", err);
+    }
+  };
+  
+
+  // 🔹 Fetch assigned counts (per eventId/serviceUnit if needed)
   const fetchAssignedCounts = async () => {
     try {
       const res = await axios.get(
         "http://localhost:5000/api/task/assigned-counts",
-        { params: { quotationId, eventId } }
+        {
+          params: {
+            quotationId: serviceUnit?.quotationId,
+            eventId: serviceUnit?.packageId,
+          },
+        }
       );
       if (res.data.success) {
         setAssignedCounts(res.data.data);
       } else {
         setAssignedCounts({ assignedPhotos: 0, assignedVideos: 0 });
       }
-    } catch (error) {
-      console.error("Error fetching assigned counts:", error);
+    } catch (err) {
+      console.error("Error fetching assigned counts:", err);
       setAssignedCounts({ assignedPhotos: 0, assignedVideos: 0 });
     }
   };
 
   useEffect(() => {
-    if (quotationId && eventId) {
+    if (collectedDataId && serviceUnitId) {
+      fetchServiceUnit();
+    }
+  }, [collectedDataId, serviceUnitId]);
+
+  useEffect(() => {
+    if (serviceUnit) {
       fetchAssignedCounts();
     }
-  }, [quotationId, eventId]);
+  }, [serviceUnit]);
 
-  const handleOpenModal = (serviceType) => {
-    setSelectedService(serviceType);
+  const handleOpenModal = (type) => {
+    setSelectedService(type);
     setShowModal(true);
     fetchVendors();
   };
@@ -446,13 +908,23 @@ const EventServicesTable = () => {
     });
   };
 
+  const handleVendorChange = (selectedOption) => {
+    setTaskDetails({
+      ...taskDetails,
+      vendorId: selectedOption.value,
+      vendorName: selectedOption.label,
+    });
+  };
+
   const handleAssignTask = async () => {
+    if (!serviceUnit) return;
+
     const payload = {
-      quotationId,
-      eventId,
-      eventName,
-      totalPhotos,
-      totalVideos,
+      quotationId: serviceUnit.quotationId,
+      eventId: serviceUnit.packageId,
+      eventName: serviceUnit.packageName,
+      totalPhotos: serviceUnit.noOfPhotos,
+      totalVideos: serviceUnit.noOfVideos,
       assignments: [
         {
           serviceName: selectedService,
@@ -461,11 +933,11 @@ const EventServicesTable = () => {
           taskDescription: taskDetails.taskDescription,
           completionDate: taskDetails.completionDate,
           photosAssigned:
-            selectedService !== "Video Editing"
+            selectedService !== "Video Sorting"
               ? Number(taskDetails.numPhotos) || 0
               : 0,
           videosAssigned:
-            selectedService !== "Photo Editing"
+            selectedService !== "Photo Sorting"
               ? Number(taskDetails.numVideos) || 0
               : 0,
         },
@@ -482,34 +954,18 @@ const EventServicesTable = () => {
         handleCloseModal();
         fetchAssignedCounts();
       } else {
-        alert(res.data.message || "Failed to assign task");
+        alert(res.data.message || "Failed to assign task.");
       }
-    } catch (error) {
-      console.error("Error assigning task:", error);
-      alert(
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to assign task"
-      );
+    } catch (err) {
+      console.error("Error assigning task:", err);
+      alert("Error while assigning task.");
     }
   };
 
-  const handleVendorChange = (selectedOption) => {
-    setTaskDetails({
-      ...taskDetails,
-      vendorId: selectedOption.value,
-      vendorName: selectedOption.label,
-    });
-  };
-
-  // ---- NEW: Update event editing status on collected-data ----
   const updateEventStatus = async () => {
-    if (!collectedDataId || !eventId) {
-      return alert("Missing collected data id or event id.");
-    }
     try {
       setUpdatingStatus(true);
-      const url = `http://localhost:5000/api/collected-data/${collectedDataId}/events/${eventId}/status`;
+      const url = `http://localhost:5000/api/collected-data/${collectedDataId}/events/${serviceUnitId}/status`;
       const res = await axios.put(url, { newStatus: selectedStatus });
       if (res.data?.success) {
         alert(`Status updated to ${selectedStatus}`);
@@ -518,39 +974,54 @@ const EventServicesTable = () => {
       }
     } catch (err) {
       console.error("Error updating status:", err);
-      alert(
-        err?.response?.data?.message || err.message || "Failed to update status"
-      );
+      alert("Error while updating status.");
     } finally {
       setUpdatingStatus(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="text-center py-4">
+        <Spinner animation="border" role="status" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container py-4">
+        <Alert variant="danger">{error}</Alert>
+      </div>
+    );
+  }
+
+  if (!serviceUnit) {
+    return <div className="text-center py-4">No service unit found</div>;
+  }
+
   const remainingPhotos =
-    (totalPhotos || 0) - (assignedCounts.assignedPhotos || 0);
+    (serviceUnit.noOfPhotos || 0) - (assignedCounts.assignedPhotos || 0);
   const remainingVideos =
-    (totalVideos || 0) - (assignedCounts.assignedVideos || 0);
+    (serviceUnit.noOfVideos || 0) - (assignedCounts.assignedVideos || 0);
 
   return (
     <div className="container py-4" style={{ fontSize: "13px" }}>
-      {eventName && (
-        <div className="mb-3">
-          <h5>
-            Event: <strong>{eventName}</strong>
-          </h5>
-          <div style={{ fontSize: "14px", marginTop: "5px" }}>
-            📷 <strong>Total Photos:</strong> {totalPhotos} | Assigned:{" "}
-            {assignedCounts.assignedPhotos || 0} || Remaining:{" "}
-            {remainingPhotos < 0 ? 0 : remainingPhotos}
-            <br />
-            🎥 <strong>Total Videos:</strong> {totalVideos} | Assigned:{" "}
-            {assignedCounts.assignedVideos || 0} || Remaining:{" "}
-            {remainingVideos < 0 ? 0 : remainingVideos}
-          </div>
-        </div>
-      )}
+      <h5>
+        Event: <strong>{serviceUnit.packageName}</strong> <br />
+        Service: <strong>{serviceUnit.serviceName}</strong>
+      </h5>
+      <div style={{ fontSize: "14px", marginTop: "5px" }}>
+        📷 <strong>Total Photos:</strong> {serviceUnit.noOfPhotos} | Assigned:{" "}
+        {assignedCounts.assignedPhotos || 0} || Remaining:{" "}
+        {remainingPhotos < 0 ? 0 : remainingPhotos}
+        <br />
+        🎥 <strong>Total Videos:</strong> {serviceUnit.noOfVideos} | Assigned:{" "}
+        {assignedCounts.assignedVideos || 0} || Remaining:{" "}
+        {remainingVideos < 0 ? 0 : remainingVideos}
+      </div>
 
-      <div className="d-flex justify-content-end align-items-center gap-2 mb-3">
+      <div className="d-flex justify-content-end align-items-center gap-2 mb-3 mt-3">
         <span className="me-2">Update status:</span>
         <Form.Select
           size="sm"
@@ -587,13 +1058,7 @@ const EventServicesTable = () => {
           Editing Options
         </Card.Header>
         <Card.Body className="p-0">
-          <Table
-            bordered
-            hover
-            responsive
-            className="mb-0"
-            style={{ textAlign: "center" }}
-          >
+          <Table bordered hover responsive className="mb-0">
             <thead className="table-light">
               <tr>
                 <th>Sl.No</th>
@@ -602,7 +1067,7 @@ const EventServicesTable = () => {
               </tr>
             </thead>
             <tbody>
-              {["Photo Editing", "Video Editing", "Photo & Video Editing"].map(
+              {["Photo Sorting", "Video Sorting", "Photo & Video Sorting"].map(
                 (type, idx) => (
                   <tr key={type}>
                     <td>{String(idx + 1).padStart(2, "0")}</td>
@@ -638,7 +1103,7 @@ const EventServicesTable = () => {
                             variant="light"
                             size="sm"
                             onClick={() =>
-                              navigate(`/assignments/${eventId}/${type}`)
+                              navigate(`/assignments/${serviceUnitId}/${type}`)
                             }
                           >
                             <FaEye />
@@ -654,7 +1119,7 @@ const EventServicesTable = () => {
         </Card.Body>
       </Card>
 
-      {/* Assign Task Modal */}
+      {/* Modal */}
       <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Assign Task</Modal.Title>
@@ -664,7 +1129,7 @@ const EventServicesTable = () => {
             <div className="flex-fill">
               <Form.Group className="mb-3">
                 <Form.Label>Event Name</Form.Label>
-                <Form.Control value={eventName || ""} disabled />
+                <Form.Control value={serviceUnit.packageName} disabled />
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Select Vendor</Form.Label>
@@ -672,18 +1137,6 @@ const EventServicesTable = () => {
                   options={vendors}
                   onChange={handleVendorChange}
                   placeholder="Select Vendor"
-                  isSearchable
-                  styles={{
-                    control: (provided) => ({
-                      ...provided,
-                      minHeight: "38px",
-                      fontSize: "14px",
-                    }),
-                    option: (provided) => ({
-                      ...provided,
-                      fontSize: "14px",
-                    }),
-                  }}
                 />
               </Form.Group>
             </div>
@@ -715,9 +1168,9 @@ const EventServicesTable = () => {
                   }
                 />
               </Form.Group>
-              {selectedService !== "Video Editing" && (
+              {selectedService !== "Video Sorting" && (
                 <Form.Group className="mb-3">
-                  <Form.Label>No. of Photos to Edit</Form.Label>
+                  <Form.Label>No. of Photos to sort</Form.Label>
                   <Form.Control
                     type="number"
                     value={taskDetails.numPhotos}
@@ -730,9 +1183,9 @@ const EventServicesTable = () => {
                   />
                 </Form.Group>
               )}
-              {selectedService !== "Photo Editing" && (
+              {selectedService !== "Photo Sorting" && (
                 <Form.Group className="mb-3">
-                  <Form.Label>No. of Videos to Edit</Form.Label>
+                  <Form.Label>No. of Videos to sort</Form.Label>
                   <Form.Control
                     type="number"
                     value={taskDetails.numVideos}

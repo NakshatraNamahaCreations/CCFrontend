@@ -3,7 +3,7 @@ import { useLocation, matchPath, useNavigate } from "react-router-dom";
 import { FaUserCircle, FaArrowLeft, FaSignOutAlt, FaUser } from "react-icons/fa";
 import { Button, Card } from "react-bootstrap";
 
-const Header = () => {
+const Header = ({handleLogout}) => {
   const location = useLocation();
   const [currentTab, setCurrentTab] = useState("Dashboard");
   const [showUserCard, setShowUserCard] = useState(false);
@@ -157,17 +157,17 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Clear user data & token from localStorage
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("isLoggedIn");
+  // const handleLogout = () => {
+  //   // Clear user data & token from localStorage
+  //   localStorage.removeItem("user");
+  //   localStorage.removeItem("token");
+  //   localStorage.removeItem("isLoggedIn");
 
-    setShowUserCard(false);
-    window.location.reload();
-    // Redirect to login page
-    navigate("/", { replace: true });
-  };
+  //   setShowUserCard(false);
+  //   // window.location.reload();
+  //   // Redirect to login page
+  //   navigate("/login", { replace: true });
+  // };
   const excludedPaths = ["/dashboard", "/master", "/customer", "/quotation", "/booking", "/vendors", "/inventory", "/payment", "/post-production"];
 
   return (
@@ -205,20 +205,11 @@ const Header = () => {
               </div>
 
               <div className="d-grid gap-2">
-                {/* <Button
-                  variant="outline-dark"
-                  className="d-flex align-items-center justify-content-center gap-2"
-                  onClick={() => {
-                    navigate("/profile");
-                    setShowUserCard(false);
-                  }}
-                >
-                  <FaUser /> Profile
-                </Button> */}
+              
                 <Button
                   variant="outline-danger"
                   className="d-flex align-items-center justify-content-center gap-2"
-                  onClick={handleLogout}
+                  onClick={handleLogout} 
                 >
                   <FaSignOutAlt /> Logout
                 </Button>

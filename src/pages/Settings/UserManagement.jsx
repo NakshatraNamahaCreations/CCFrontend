@@ -27,13 +27,13 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/api/users');
+            const response = await fetch('http://localhost:5000/api/admin');
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to fetch users');
             }
             const data = await response.json();
-            setUsers(data);
+            setUsers(Array.isArray(data) ? data : (data?.data || []));
             setError('');
         } catch (err) {
             setError(err.message);
@@ -70,53 +70,41 @@ const UserManagement = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const url = formData.id
-                ? `http://localhost:5000/api/users/${formData.id}`
-                : 'http://localhost:5000/api/users';
-            const method = formData.id ? 'PUT' : 'POST';
-
-            const body = { ...formData };
-            if (!formData.id) delete body.id; // Remove id for new user creation
-            if (!body.password) delete body.password; // Remove empty password on update
-
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save user');
-            }
-
-            await fetchUsers();
-            handleClose();
+          const url = "http://localhost:5000/api/admin/register"; // ✅ corrected path
+          const method = "POST";
+      
+          const body = { ...formData };
+          delete body.id; // always remove id since we're only creating
+          // password is required, so no need to handle empty password
+      
+          const response = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+      
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to save user");
+          }
+      
+          await fetchUsers();
+          handleClose();
         } catch (err) {
-            setError(err.message);
+          setError(err.message);
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
+      };
+      
 
-    const handleEdit = (user) => {
-        setFormData({
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            username: user.username,
-            phonenumber: user.phonenumber, // Changed from 'phone' to 'phonenumber'
-            password: '',
-            role: user.role,
-            status: user.status
-        });
-        handleShow();
-    };
 
     const handleDelete = async (userId) => {
+        const ok = window.confirm("Are you sure you want to delete this admin account? This action cannot be undone.");
+        if (!ok) return;
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+            const response = await fetch(`http://localhost:5000/api/admin/${userId}`, {
                 method: 'DELETE'
             });
             if (!response.ok) {
@@ -135,10 +123,8 @@ const UserManagement = () => {
     const handleToggleActive = async (user) => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/users/${user._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: user.status === 'active' ? 'inactive' : 'active' })
+            const response = await fetch(`http://localhost:5000/api/admin/${user._id}/toggle-status`, {
+                method: 'PATCH'
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -186,14 +172,14 @@ const UserManagement = () => {
                                     {user.status === 'active' ? 'Active' : 'Inactive'}
                                 </td>
                                 <td className="text-center">
-                                    <Button
+                                    {/* <Button
                                         variant="link"
                                         className="text-primary p-0 me-2"
                                         onClick={() => handleEdit(user)}
                                         disabled={loading}
                                     >
                                         <img src={editIcon} alt="editIcon" style={{ width: "20px" }} />
-                                    </Button>
+                                    </Button> */}
                                     <Button
                                         variant="link"
                                         className="text-danger p-0 me-2"
@@ -300,19 +286,19 @@ const UserManagement = () => {
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Role</Form.Label>
-                                  <Form.Select
-  name="role"
-  value={formData.role}
-  onChange={handleInputChange}
-  required
-  disabled={loading}
->
-  <option value="user">User</option>
-  <option value="admin">Admin</option>
-  <option value="accountant">Accountant</option>
-  <option value="manager">Manager</option>
-  <option value="superadmin">Super Admin</option>
-</Form.Select>
+                                    <Form.Select
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleInputChange}
+                                        required
+                                        disabled={loading}
+                                    >
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="accountant">Accountant</option>
+                                        <option value="manager">Manager</option>
+                                        <option value="superadmin">Super Admin</option>
+                                    </Form.Select>
                                 </Form.Group>
                             </div>
                         </div>

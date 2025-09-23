@@ -19,6 +19,7 @@ import {
   FaMoneyCheckAlt,
   FaBoxOpen,
 } from "react-icons/fa";
+import PaymentStatsChart from "./PaymentStatsChart";
 
 const Dashboard = () => {
   const [newQueriesCount, setNewQueriesCount] = useState(0);
@@ -297,6 +298,8 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      <PaymentStatsChart/>
     </div>
   );
 };

@@ -418,6 +418,14 @@ const VendorAssign = () => {
   const [assistantOptionsMap, setAssistantOptionsMap] = useState({});
   const [assistantLoadingMap, setAssistantLoadingMap] = useState({});
 
+
+  // Normalize service name (remove "Comp" or "Complementary")
+  const normalizeServiceName = (name = "") =>
+    name
+      .replace(/^Comp\s+/i, "")
+      .replace(/^Complementary\s+/i, "")
+      .trim();
+
   // fetch quotation once
   useEffect(() => {
     const fetchQuotation = async () => {
@@ -503,7 +511,9 @@ const VendorAssign = () => {
   }, [pkg]);
 
   const handleCheckVendor = (serviceId, unitIndex, serviceName) => {
-    navigate(`/vendors/available-vendors/${serviceName}`, {
+    const normalized = normalizeServiceName(serviceName);
+
+    navigate(`/vendors/available-vendors/${encodeURIComponent(normalized)}`, {
       state: {
         quotationId,
         packageId,
@@ -516,6 +526,7 @@ const VendorAssign = () => {
       },
     });
   };
+
 
   // Assistant assign handler
   // Assistant assign handler
