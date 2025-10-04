@@ -22,6 +22,9 @@ import {
   FaUserTie,
   FaUserAlt,
   FaInstagram,
+  FaUserPlus,
+  FaWhatsapp,
+  FaStickyNote,
 } from "react-icons/fa";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import deleteIcon from "../../assets/icons/deleteIcon.png";
@@ -42,15 +45,15 @@ const Chip = ({ children, tone = "light" }) => (
 );
 
 const paymentModes = [
-  { value: "", label: "-" },
   { value: "Online", label: "Online" },
   { value: "Cash", label: "Cash" },
   { value: "Cheque", label: "Cheque" },
-  { value: "Other", label: "Other" },
+  { value: "Bank Transfer", label: "Bank Transfer" },
 ];
 
 const statusOptions = [
   { value: "Pending", label: "Pending" },
+  { value: "Partial Paid", label: "Partial Paid" },
   { value: "Completed", label: "Completed" },
 ];
 
@@ -64,20 +67,23 @@ const BookingdetailsPage = () => {
   const [newInstruction, setNewInstruction] = useState("");
   const [showCollectDataModal, setShowCollectDataModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
-  // Track selected service unit for service-wise data collection
-  const [selectedServiceUnit, setSelectedServiceUnit] = useState(null); // { packageId, packageName, serviceId, serviceName, unitIndex }
+  const [selectedServiceUnit, setSelectedServiceUnit] = useState(null);
   const [collectedDataList, setCollectedDataList] = useState(null);
-  const [editMode, setEditMode] = useState(false); // Track if editing
+  const [editMode, setEditMode] = useState(false);
   const [albums, setAlbums] = useState([]);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
-  const [modalMode, setModalMode] = useState("add"); // 'add' | 'edit'
+  const [modalMode, setModalMode] = useState("add");
   const [editingAlbum, setEditingAlbum] = useState(null);
   const [viewAlbum, setViewAlbum] = useState(null);
 
+  // ✅ Initial state
   const [collectData, setCollectData] = useState({
     personName: "",
     cameraName: "",
     totalDriveSize: "",
+    backupDrive: "",
+    driveName: "",
+    qualityChecked: false,
     filledSize: "",
     copyingPerson: "",
     systemNumber: "",
@@ -86,6 +92,10 @@ const BookingdetailsPage = () => {
     backupCopiedLocation: "",
     noOfPhotos: "",
     noOfVideos: "",
+    firstPhotoTime: "",
+    lastPhotoTime: "",
+    firstVideoTime: "",
+    lastVideoTime: "",
     submissionDate: "",
     notes: "",
   });
@@ -96,18 +106,16 @@ const BookingdetailsPage = () => {
   const [paymentData, setPaymentData] = useState({
     paymentDate: dayjs().format("YYYY-MM-DD"),
     paymentMode: "Online",
-    amount: "",
-    status: "Completed",
+    amount: 0,
+    status: "Pending",
   });
-
-  // Account holder state
   const [existingHolders, setExistingHolders] = useState([]);
-  const [newHolders, setNewHolders] = useState([{ name: "", amount: "" }]);
+  const [newHolder, setNewHolder] = useState({ name: "" });
 
   // --- package qty edit modal state ---
   const [pkgQtyModalOpen, setPkgQtyModalOpen] = useState(false);
-  const [pkgEditIndex, setPkgEditIndex] = useState(null); // index in quotationData.packages
-  const [pkgDraft, setPkgDraft] = useState(null); // deep copy of the package being edited
+  const [pkgEditIndex, setPkgEditIndex] = useState(null);
+  const [pkgDraft, setPkgDraft] = useState(null);
 
   // Add state for person edit modal
   const [showPersonEditModal, setShowPersonEditModal] = useState(false);
@@ -120,8 +128,31 @@ const BookingdetailsPage = () => {
     instagramHandle: "",
   });
 
+  const [discountValue, setDiscountValue] = useState(0); // NEW: discount amount
+  const [discountEditMode, setDiscountEditMode] = useState(false);
+  const [discountDraft, setDiscountDraft] = useState(discountValue);
+
+  // Action modal for Note / Group
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionType, setActionType] = useState(null); // "note" or "group"
+  const [actionValue, setActionValue] = useState("");
+
   const { id } = useParams();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setDiscountDraft(discountValue);
+  }, [discountValue]);
+
+  const handleDiscountEditClick = () => {
+    setDiscountEditMode(true);
+    setDiscountDraft(discountValue);
+  };
+
+  const handleDiscountDraftChange = (e) => {
+    const val = e.target.value.replace(/[^0-9]/g, "");
+    setDiscountDraft(val);
+  };
 
   // Add function to handle opening person edit modal
   const handleEditPerson = (person) => {
@@ -136,7 +167,6 @@ const BookingdetailsPage = () => {
     setShowPersonEditModal(true);
   };
 
-  // Add function to handle person form changes
   const handlePersonFormChange = (e) => {
     const { name, value } = e.target;
     setPersonFormData((prev) => ({
@@ -145,28 +175,33 @@ const BookingdetailsPage = () => {
     }));
   };
 
-  // Add function to save person details
   const handleSavePersonDetails = async () => {
     try {
-      // For Instagram-only update
       const res = await axios.put(
-        `http://localhost:5000/api/lead/${quotationData?.leadId?._id}/person/${editingPerson._id}/insta-handle`,
-        { instagramHandle: personFormData.instagramHandle } // Send only Instagram handle
+        `http://localhost:5000/api/lead/${quotationData?.leadId?._id}/person/${editingPerson._id}`,
+        {
+          instagramHandle: personFormData.instagramHandle,
+          email: personFormData.email,
+          profession: personFormData.profession,
+        }
       );
-
-      // Update local state with the updated person data
+      // Update all fields after API call
       setQuotationData((prev) => ({
         ...prev,
         leadId: {
           ...prev.leadId,
           persons: prev.leadId.persons.map((p) =>
             p._id === editingPerson._id
-              ? { ...p, instagramHandle: personFormData.instagramHandle }
+              ? {
+                  ...p,
+                  instagramHandle: personFormData.instagramHandle,
+                  email: personFormData.email,
+                  profession: personFormData.profession,
+                }
               : p
           ),
         },
       }));
-
       toast.success("Instagram handle updated successfully");
       setShowPersonEditModal(false);
     } catch (error) {
@@ -177,21 +212,16 @@ const BookingdetailsPage = () => {
 
   const handleAddInstruction = async () => {
     if (!newInstruction.trim()) return;
-
     try {
       const res = await axios.put(
         `http://localhost:5000/api/quotations/${id}/instruction/add`,
-        {
-          instruction: newInstruction.trim(),
-        }
+        { instruction: newInstruction.trim() }
       );
-
       setQuotationData((prev) => ({
         ...prev,
         clientInstructions: res.data.clientInstructions,
       }));
-
-      setNewInstruction(""); // clear input
+      setNewInstruction("");
       toast.success("Instruction added");
     } catch (error) {
       console.error("Add instruction error:", error);
@@ -203,16 +233,12 @@ const BookingdetailsPage = () => {
     try {
       const res = await axios.delete(
         `http://localhost:5000/api/quotations/${id}/instruction/delete`,
-        {
-          data: { instruction: instructionToDelete },
-        }
+        { data: { instruction: instructionToDelete } }
       );
-
       setQuotationData((prev) => ({
         ...prev,
         clientInstructions: res.data.clientInstructions,
       }));
-
       toast.success("Instruction deleted");
     } catch (error) {
       console.error("Delete instruction error:", error);
@@ -220,20 +246,19 @@ const BookingdetailsPage = () => {
     }
   };
 
-  // Fetch collected data for this quotation
   useEffect(() => {
     const fetchCollectedData = async () => {
       try {
         const res = await axios.get(
           `http://localhost:5000/api/collected-data/${id}`
         );
-        setCollectedDataList(res.data.data); // .data is the CollectedData doc
+        setCollectedDataList(res.data.data);
       } catch (err) {
         setCollectedDataList(null);
       }
     };
     if (id) fetchCollectedData();
-  }, [id, showCollectDataModal]); // refetch after modal closes
+  }, [id, showCollectDataModal]);
 
   const fetchQuotation = async () => {
     try {
@@ -241,7 +266,8 @@ const BookingdetailsPage = () => {
       const q = res.data.quotation;
       setQuotationData(q);
       setInstallments(q.installments || []);
-      setAlbums(q.albums || []); // <-- add this line
+      setAlbums(q.albums || []);
+      setDiscountValue(Number(q.discountValue || 0)); // set discountValue
       console.log("res.data.q", q);
     } catch (err) {
       toast.error("Error loading quotation");
@@ -277,6 +303,7 @@ const BookingdetailsPage = () => {
     );
   }, [pkgDraft]);
 
+  // --- Totals calculation using discountValue ---
   const packageSubtotal = Math.round(
     (quotationData?.packages || []).reduce(
       (sum, pkg) =>
@@ -297,17 +324,15 @@ const BookingdetailsPage = () => {
     [albums]
   );
 
-  const totalBeforeDiscount = Math.round(packageSubtotal + albumSubtotal);
-  const discount = Math.round(
-    (totalBeforeDiscount * (quotationData?.discountPercent || 0)) / 100
-  );
-  const totalAfterDiscount = Math.round(totalBeforeDiscount - discount);
+  const totalBeforeDiscount = packageSubtotal + albumSubtotal;
+  const totalAfterDiscount = totalBeforeDiscount - (Number(discountValue) || 0);
   const gst = quotationData?.gstApplied
     ? Math.round(totalAfterDiscount * 0.18)
     : 0;
-  const totalAmount = Math.round(totalAfterDiscount + gst) || 0;
+  const totalAmount = totalAfterDiscount + gst;
   const grandTotal = totalAmount;
 
+  // --- Margin calculations (unchanged, discount not applied to margin) ---
   const packageMarginSubtotal = Math.round(
     (quotationData?.packages || []).reduce(
       (sum, pkg) =>
@@ -319,57 +344,59 @@ const BookingdetailsPage = () => {
       0
     )
   );
-
-  const totalMarginBeforeDiscount = Math.round(
-    packageMarginSubtotal + albumSubtotal
-  );
-  const marginDiscount = Math.round(
-    (totalMarginBeforeDiscount * (quotationData?.discountPercent || 0)) / 100
-  );
-  const marginAfterDiscount = Math.round(
-    totalMarginBeforeDiscount - marginDiscount
-  );
+  const totalMarginBeforeDiscount = packageMarginSubtotal + albumSubtotal;
+  const marginAfterDiscount = totalMarginBeforeDiscount;
   const marginGst = quotationData?.gstApplied
     ? Math.round(marginAfterDiscount * 0.18)
     : 0;
-  const totalMarginFinal = Math.round(marginAfterDiscount + marginGst);
+  const totalMarginFinal = marginAfterDiscount + marginGst;
+
+  const handleDiscountSave = async () => {
+    setDiscountEditMode(false);
+    setDiscountValue(discountDraft);
+
+    const nextPackages = quotationData?.packages || [];
+    const totals = buildMinimalTotals(null, nextPackages, discountDraft); // ✅ pass draft
+
+    const payload = {
+      package: null,
+      totalPackageAmt: totals.totalPackageAmt,
+      totalAlbumAmount: totals.totalAlbumAmount,
+      discountValue: totals.discountValue, // ✅ use computed
+      gstValue: totals.gstValue,
+      totalAmount: totals.totalAmount,
+      grandTotal: totals.totalAmount,
+      totalMarginFinal: totals.totalMarginFinal,
+      installments: totals.installments,
+    };
+
+    try {
+      await axios.put(
+        `http://localhost:5000/api/quotations/${id}/totals-min`,
+        payload
+      );
+      await fetchQuotation(); // refresh
+      toast.success("Discount updated");
+    } catch (err) {
+      toast.error("Failed to update discount");
+    }
+  };
+
+  const handleDiscountCancel = () => {
+    setDiscountEditMode(false);
+    setDiscountDraft(discountValue);
+  };
+
   // Compute album subtotal for any array (used when we have a "next" array)
   const computeAlbumSubtotalNow = (albumsArr) =>
     Math.round(
       (albumsArr || []).reduce((sum, a) => sum + computeAlbumTotal(a), 0)
     );
 
-  // In BookingdetailsPage.js
-  const calculateInstallmentDetails = (installments, currentGrandTotal) => {
-    return installments.map((inst) => {
-      const amount = Math.round(
-        (inst.paymentPercentage / 100) * currentGrandTotal
-      );
-      const pending =
-        inst.status === "Completed" ? amount - (inst.paidAmount || 0) : amount;
-
-      // Determine status - if marked Completed but has pending amount, change to Partial
-      let status = inst.status;
-      if (inst.status === "Completed" && pending > 0) {
-        status = "Partial Paid";
-      } else if (inst.status === "Partial Paid" && pending <= 0) {
-        status = "Completed";
-      }
-
-      return {
-        ...inst,
-        paymentAmount: amount,
-        pendingAmount: pending,
-        paidAmount: inst.status === "Completed" ? inst.paymentAmount : 0,
-        status,
-      };
-    });
-  };
-
-  // Build exactly the minimal payload your backend wants to store
   const buildMinimalTotals = (
     albumsOverride = null,
-    packagesOverride = null
+    packagesOverride = null,
+    discountOverride = null // ✅ allow override
   ) => {
     const albumsArr = Array.isArray(albumsOverride) ? albumsOverride : albums;
     const packagesArr = Array.isArray(packagesOverride)
@@ -382,48 +409,46 @@ const BookingdetailsPage = () => {
     const totalBeforeDiscountNow = Math.round(
       packageSubtotalNow + albumSubtotalNow
     );
-    const discountNow = Math.round(
-      (totalBeforeDiscountNow * (quotationData?.discountPercent || 0)) / 100
+
+    // ✅ Use override if provided, else current discountValue
+    const discountValueNow =
+      discountOverride !== null
+        ? Number(discountOverride)
+        : Number(discountValue) || 0;
+
+    const totalAfterDiscountNow = Math.max(
+      0,
+      Math.round(totalBeforeDiscountNow - discountValueNow)
     );
-    const totalAfterDiscountNow = Math.round(
-      totalBeforeDiscountNow - discountNow
-    );
+
     const gstNow = quotationData?.gstApplied
       ? Math.round(totalAfterDiscountNow * 0.18)
       : 0;
+
     const grandTotalNow = Math.round(totalAfterDiscountNow + gstNow);
 
-    // Calculate new installment amounts based on new grand total
-    // PRESERVE EXISTING ACCOUNT HOLDERS
+    // --- Installments recalculation ---
     const calculatedInstallments = (installments || []).map((inst) => {
       const newAmount = Math.round(
         (inst.paymentPercentage / 100) * grandTotalNow
       );
       return {
-        ...inst, // Keep all existing properties including accountHolders
-        paymentAmount: newAmount, // Only update the amount
+        ...inst,
+        paymentAmount: newAmount,
       };
     });
 
     // Redistribute existing payments intelligently
     let remainingPayment = 0;
     const finalInstallments = calculatedInstallments.map((inst) => {
-      // If installment was previously paid (either fully or partially)
       const previouslyPaid = inst.paidAmount || 0;
-
-      // Calculate how much should be paid for this installment in new structure
       const newPaidAmount = Math.min(
         inst.paymentAmount,
         previouslyPaid + remainingPayment
       );
-
-      // Calculate pending amount
       const pending = inst.paymentAmount - newPaidAmount;
-
-      // Update remaining payment that can be applied to next installments
       remainingPayment = previouslyPaid + remainingPayment - newPaidAmount;
 
-      // Determine status
       let status = inst.status;
       if (newPaidAmount >= inst.paymentAmount) {
         status = "Completed";
@@ -434,15 +459,13 @@ const BookingdetailsPage = () => {
       }
 
       return {
-        ...inst, // Keep all properties including accountHolders
+        ...inst,
         paidAmount: newPaidAmount,
         pendingAmount: pending,
         status,
       };
     });
 
-    // If there's still remaining payment after processing all installments,
-    // add it to the last installment as an overpayment
     if (remainingPayment > 0 && finalInstallments.length > 0) {
       const last = finalInstallments[finalInstallments.length - 1];
       last.paidAmount += remainingPayment;
@@ -450,20 +473,23 @@ const BookingdetailsPage = () => {
       last.status = "Completed";
     }
 
-    // Margin calculations (kept as-is)
+    // --- Margin calculations (discount as value, not percent) ---
     const totalMarginBeforeDiscountNow = Math.round(
       packageMarginSubtotal + albumSubtotalNow
     );
-    const marginDiscountNow = Math.round(
-      (totalMarginBeforeDiscountNow * (quotationData?.discountPercent || 0)) /
-      100
+
+    // Defensive: avoid division by zero
+    const marginDiscountNow = discountValueNow;
+
+    const marginAfterDiscountNow = Math.max(
+      0,
+      totalMarginBeforeDiscountNow - discountValueNow
     );
-    const marginAfterDiscountNow = Math.round(
-      totalMarginBeforeDiscountNow - marginDiscountNow
-    );
+
     const marginGstNow = quotationData?.gstApplied
       ? Math.round(marginAfterDiscountNow * 0.18)
       : 0;
+
     const totalMarginFinalNow = Math.round(
       marginAfterDiscountNow + marginGstNow
     );
@@ -471,42 +497,44 @@ const BookingdetailsPage = () => {
     return {
       totalPackageAmt: packageSubtotalNow,
       totalAlbumAmount: albumSubtotalNow,
-      discountValue: discountNow,
+      discountValue: discountValueNow,
       gstValue: gstNow,
       totalAmount: grandTotalNow,
-      installments: finalInstallments, // This now includes accountHolders
+      installments: finalInstallments,
       totalMarginFinal: totalMarginFinalNow,
+      marginDiscountValue: marginDiscountNow,
+      marginAfterDiscountValue: marginAfterDiscountNow,
+      marginGstValue: marginGstNow,
+      totalMarginBeforeDiscountValue: totalMarginBeforeDiscountNow,
     };
   };
+
+  const marginTotals = buildMinimalTotals();
+
+  // Album update API
   const pushMinimalTotalsFrom = async (albumsOverride = null) => {
     try {
-      const payload = buildMinimalTotals(albumsOverride);
+      const payload = buildMinimalTotals(albumsOverride, null, discountValue);
       await axios.put(
         `http://localhost:5000/api/quotations/${id}/totals-min`,
         payload
       );
-      // Update local state with calculated installments
-      // setInstallments(payload.installments);
       fetchQuotation();
-      // Optional: toast.success("Totals updated");
     } catch (e) {
       console.error("Failed to update totals", e);
       toast.error("Failed to update totals on server");
     }
   };
 
+  // Package update API
   const savePackagesAndTotals = async (nextPackages, editedPackageIndex) => {
-    // Calculate totals based on the updated packages
-    const totals = buildMinimalTotals(null, nextPackages);
+    const totals = buildMinimalTotals(null, nextPackages, discountValue); // ✅ include discount
 
-    // Prepare payload - only include the edited package if index is provided
     const payload = {
-      // Only include the edited package if index is specified
       package:
         editedPackageIndex !== undefined
           ? nextPackages[editedPackageIndex]
           : null,
-
       totalPackageAmt: totals.totalPackageAmt,
       totalAlbumAmount: totals.totalAlbumAmount,
       discountValue: totals.discountValue,
@@ -524,11 +552,9 @@ const BookingdetailsPage = () => {
       payload
     );
 
-    // If your API returns the updated quotation, prefer that:
     if (res?.data?.quotation) {
       setQuotationData(res.data.quotation);
     } else {
-      // Fallback: refetch fresh data
       await fetchQuotation();
     }
   };
@@ -576,12 +602,12 @@ const BookingdetailsPage = () => {
     const nextPackages = (quotationData?.packages || []).map((p, i) =>
       i === pkgEditIndex
         ? {
-          ...p,
-          services: (pkgDraft.services || []).map((s) => ({
-            ...s,
-            qty: Math.max(1, Number(s.qty) || 1), // enforce min 1
-          })),
-        }
+            ...p,
+            services: (pkgDraft.services || []).map((s) => ({
+              ...s,
+              qty: Math.max(1, Number(s.qty) || 1), // enforce min 1
+            })),
+          }
         : p
     );
 
@@ -648,23 +674,24 @@ const BookingdetailsPage = () => {
     setInstallments(updated);
   };
 
-
-
   // Helper to find collected data for a specific service unit
   const findCollectedForServiceUnit = (packageId, serviceId, unitIndex) => {
     const unitsArr = collectedDataList?.serviceUnits || [];
     return unitsArr.find(
       (s) =>
-        (s.packageId?.toString() === packageId?.toString()) &&
-        (s.serviceId?.toString() === serviceId?.toString()) &&
+        s.packageId?.toString() === packageId?.toString() &&
+        s.serviceId?.toString() === serviceId?.toString() &&
         Number(s.unitIndex) === Number(unitIndex)
     );
   };
 
-
   // Open collect/edit for a specific service unit row
   const handleOpenCollectForUnit = (pkg, service, unitIndex) => {
-    const existing = findCollectedForServiceUnit(pkg._id, service._id, unitIndex);
+    const existing = findCollectedForServiceUnit(
+      pkg._id,
+      service._id,
+      unitIndex
+    );
     setSelectedServiceUnit({
       packageId: pkg._id,
       packageName: pkg.categoryName,
@@ -678,18 +705,29 @@ const BookingdetailsPage = () => {
       personName: collectedDataList?.personName || "",
       cameraName: existing?.cameraName || "",
       totalDriveSize: existing?.totalDriveSize || "",
+      backupDrive: existing?.backupDrive || "",
+      driveName: existing?.driveName || "",
+      qualityChecked: existing?.qualityChecked || false,
       filledSize: existing?.filledSize || "",
       copyingPerson: existing?.copyingPerson || "",
       systemNumber: collectedDataList?.systemNumber || "",
-      backupSystemNumber: collectedDataList?.backupSystemNumber || existing?.backupSystemNumber || "",
+      backupSystemNumber:
+        collectedDataList?.backupSystemNumber ||
+        existing?.backupSystemNumber ||
+        "",
       copiedLocation: existing?.copiedLocation || "",
       backupCopiedLocation: existing?.backupCopiedLocation || "",
       noOfPhotos: existing?.noOfPhotos || "",
       noOfVideos: existing?.noOfVideos || "",
+      firstPhotoTime: existing?.firstPhotoTime || "",
+      lastPhotoTime: existing?.lastPhotoTime || "",
+      firstVideoTime: existing?.firstVideoTime || "",
+      lastVideoTime: existing?.lastVideoTime || "",
       submissionDate: existing?.submissionDate
         ? dayjs(existing.submissionDate).format("YYYY-MM-DD")
         : "",
       notes: existing?.notes || "",
+      collectionType: "both", // frontend-only
     });
 
     setEditMode(!!existing);
@@ -697,11 +735,16 @@ const BookingdetailsPage = () => {
   };
 
   const handleCollectDataChange = (e) => {
-    const { name, value } = e.target;
-    setCollectData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    try {
+      const { name, value, type, checked } = e.target;
+
+      setCollectData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value, 
+      }));
+    } catch (err) {
+      console.error("handleCollectDataChange error:", err);
+    }
   };
 
   const handleCollectDataSubmit = async () => {
@@ -709,34 +752,53 @@ const BookingdetailsPage = () => {
       const payload = {
         quotationId: id,
         quotationUniqueId: quotationData?.quotationId,
+
+        // Event-level details
         personName: collectData.personName,
         systemNumber: collectData.systemNumber,
-        backupSystemNumber: collectData.backupSystemNumber,   // ✅ Added
-        // Keep event-level fields for backward compatibility
-        eventId: selectedVendor?.eventId || selectedServiceUnit?.packageId,
-        eventName: selectedVendor?.eventName || selectedServiceUnit?.packageName,
-        // New: service-unit identifiers
+        backupSystemNumber: collectData.backupSystemNumber,
+
+        // Package/service identifiers
+        eventId: selectedVendor?.eventId || selectedServiceUnit?.packageId, // legacy
+        eventName:
+          selectedVendor?.eventName || selectedServiceUnit?.packageName, // legacy
         packageId: selectedServiceUnit?.packageId,
         packageName: selectedServiceUnit?.packageName,
         serviceId: selectedServiceUnit?.serviceId,
         serviceName: selectedServiceUnit?.serviceName,
         unitIndex: selectedServiceUnit?.unitIndex,
+
+        // Collection details
         cameraName: collectData.cameraName,
         totalDriveSize: collectData.totalDriveSize,
+        backupDrive: collectData.backupDrive,
+        driveName: collectData.driveName,
+        qualityChecked: collectData.qualityChecked,
         filledSize: collectData.filledSize,
         copyingPerson: collectData.copyingPerson,
         copiedLocation: collectData.copiedLocation,
-        backupCopiedLocation: collectData.backupCopiedLocation, // ✅ Added
+        backupCopiedLocation: collectData.backupCopiedLocation,
         noOfPhotos: collectData.noOfPhotos,
         noOfVideos: collectData.noOfVideos,
+
+        // Times
+        firstPhotoTime: collectData.firstPhotoTime,
+        lastPhotoTime: collectData.lastPhotoTime,
+        firstVideoTime: collectData.firstVideoTime,
+        lastVideoTime: collectData.lastVideoTime,
+
+        // Meta
         submissionDate: collectData.submissionDate,
         notes: collectData.notes,
       };
 
       await axios.post("http://localhost:5000/api/collected-data/", payload);
+
       toast.success(
         editMode ? "Data updated successfully" : "Data collected successfully"
       );
+
+      // Reset after submit
       setShowCollectDataModal(false);
       setSelectedVendor(null);
       setSelectedServiceUnit(null);
@@ -745,6 +807,9 @@ const BookingdetailsPage = () => {
         personName: "",
         cameraName: "",
         totalDriveSize: "",
+        backupDrive: "",
+        driveName: "",
+        qualityChecked: false,
         filledSize: "",
         copyingPerson: "",
         systemNumber: "",
@@ -753,14 +818,19 @@ const BookingdetailsPage = () => {
         backupCopiedLocation: "",
         noOfPhotos: "",
         noOfVideos: "",
+        firstPhotoTime: "",
+        lastPhotoTime: "",
+        firstVideoTime: "",
+        lastVideoTime: "",
         submissionDate: "",
         notes: "",
+        collectionType: "both", // frontend-only
       });
     } catch (err) {
+      console.error("handleCollectDataSubmit error:", err);
       toast.error("Failed to collect data");
     }
   };
-
 
   const handleSaveInstallment = async (index) => {
     const inst = installments[index];
@@ -855,8 +925,8 @@ const BookingdetailsPage = () => {
       const vendorArr = Array.isArray(srv.assignedVendors)
         ? srv.assignedVendors
         : srv.assignedVendor
-          ? [srv.assignedVendor]
-          : [];
+        ? [srv.assignedVendor]
+        : [];
       const asstArr = Array.isArray(srv.assignedAssistants)
         ? srv.assignedAssistants
         : [];
@@ -971,86 +1041,57 @@ const BookingdetailsPage = () => {
     }
   };
 
+  // --- Update handleOpenPay function ---
   const handleOpenPay = (installment) => {
     setSelectedInstallment(installment);
 
-    const pending = Number(installment.pendingAmount || 0); // ✅ always use pending
-    const alreadyPaid = Array.isArray(installment.accountHolders)
-      ? installment.accountHolders.reduce(
-        (s, h) => s + Number(h.amount || 0),
-        0
-      )
-      : 0;
-
     setPaymentData({
-      paymentDate: installment.dueDate
-        ? dayjs(installment.dueDate, ["DD-MM-YYYY", "YYYY-MM-DD"]).format(
-          "YYYY-MM-DD"
-        )
-        : dayjs().format("YYYY-MM-DD"),
+      paymentDate: dayjs().format("YYYY-MM-DD"), // Always default to current date
       paymentMode: installment.paymentMode || "Online",
-      amount: pending, // ✅ fix: set to pending only
-      status: pending === 0 ? "Completed" : "Partial Paid",
+      amount: installment.pendingAmount || 0, // Default to pending amount
+      status: installment.status || "Pending",
+      maxAmount: installment.pendingAmount || 0, // Max is pending amount
     });
 
-    setExistingHolders(installment.accountHolders || []);
-
-    setNewHolders([{ name: "", amount: pending.toString() }]); // ✅ same pending
+    setExistingHolders(
+      Array.isArray(installment.accountHolders)
+        ? installment.accountHolders
+        : []
+    );
+    setNewHolder({ name: "" });
     setShowPaymentModal(true);
   };
 
   const handlePaymentSubmit = async () => {
-    const name = (newHolders[0]?.name || "").trim();
-    const amount = Number(paymentData.amount || 0);
+    const name = (newHolder.name || "").trim();
 
-    if (!name || amount <= 0) {
-      toast.error("Enter account holder name.");
+    if (!name) {
+      toast.error("Please enter account holder name.");
       return;
     }
-
-    // Check if account holder already exists
-    const existingHolderIndex = existingHolders.findIndex(
-      (h) => h.name.toLowerCase() === name.toLowerCase()
-    );
-
-    const alreadyPaid = existingHolders.reduce(
-      (sum, h) => sum + Number(h.amount || 0),
-      0
-    );
-    const planned = Number(selectedInstallment?.paymentAmount || 0);
-
-    if (alreadyPaid + amount > planned) {
-      toast.error(
-        `Total would exceed installment. Planned ₹${planned.toLocaleString()}, already paid ₹${alreadyPaid.toLocaleString()}, new ₹${amount.toLocaleString()}`
-      );
+    if (!paymentData.status) {
+      toast.error("Please select a status.");
+      return;
+    }
+    if (Number(paymentData.amount) > Number(paymentData.maxAmount)) {
+      toast.error("Amount cannot exceed installment amount.");
+      return;
+    }
+    if (Number(paymentData.amount) <= 0) {
+      toast.error("Amount must be greater than zero.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      let updatedHolders;
-
-      if (existingHolderIndex !== -1) {
-        // Update existing holder's amount
-        updatedHolders = [...existingHolders];
-        updatedHolders[existingHolderIndex] = {
-          ...updatedHolders[existingHolderIndex],
-          amount: updatedHolders[existingHolderIndex].amount + amount,
-        };
-      } else {
-        // Add new holder
-        updatedHolders = [...existingHolders, { name, amount }];
-      }
-
       const payload = {
-        paymentAmount: planned,
+        paymentAmount: selectedInstallment.paymentAmount, // total installment amount
+        paidAmount: paymentData.amount, // amount being paid now
         paymentMode: paymentData.paymentMode,
         paymentDate: paymentData.paymentDate,
-        status:
-          alreadyPaid + amount >= planned ? "Completed" : paymentData.status,
-        accountHolders: updatedHolders, // Use the updated holders array
+        status: paymentData.status,
+        accountHolders: [{ name }],
       };
-
       const res = await axios.put(
         `http://localhost:5000/api/quotations/${id}/installment/${selectedInstallment._id}`,
         payload
@@ -1058,18 +1099,14 @@ const BookingdetailsPage = () => {
 
       if (res.data?.success) {
         toast.success("Payment recorded successfully!");
-
-        // ✅ Update installments immediately
         if (res.data.quotation?.installments) {
           setInstallments(res.data.quotation.installments);
         }
-
         setShowPaymentModal(false);
       } else {
         throw new Error(res.data?.message || "Payment failed");
       }
     } catch (err) {
-      console.error("Payment error:", err);
       toast.error(err.message || "Failed to record payment");
     } finally {
       setIsSubmitting(false);
@@ -1081,6 +1118,34 @@ const BookingdetailsPage = () => {
       <Card className="mb-4 shadow-sm border-0">
         <div className="d-flex justify-content-between align-items-center border-bottom px-3 py-2">
           <h6 className="fw-bold mb-0">Customer Details</h6>
+          <div>
+            {/* WhatsApp Group Button */}
+            <Button
+              variant="success"
+              size="sm"
+              className="me-2"
+              onClick={() => {
+                setActionType("group");
+                setActionValue(quotationData?.whatsappGroupName || "");
+                setShowActionModal(true);
+              }}
+            >
+              <FaWhatsapp /> Add Group
+            </Button>
+
+            {/* Note Button */}
+            <Button
+              variant="dark"
+              size="sm"
+              onClick={() => {
+                setActionType("note");
+                setActionValue(quotationData?.quoteNote || "");
+                setShowActionModal(true);
+              }}
+            >
+              <FaStickyNote /> Add Note
+            </Button>
+          </div>
         </div>
         {isLoading ? (
           <div className="px-3 py-4">Loading...</div>
@@ -1101,10 +1166,30 @@ const BookingdetailsPage = () => {
                 <strong>Reference:</strong>{" "}
                 <span>{quotationData?.leadId?.referenceForm}</span>
               </div>
-              <div className="col-md-4 " style={{ fontSize: "16px" }}>
+              <div className="col-md-4 ">
                 <strong>Note:</strong> <span>{quotationData?.quoteNote}</span>
               </div>
+              {/* ✅ Stylish WhatsApp Group Display */}
+              {quotationData?.whatsappGroupName && (
+                <div className="col-md-4 mt-2">
+                  <strong>WhatsApp Group:</strong>{" "}
+                  <span
+                    className="badge d-inline-flex align-items-center px-3 py-2"
+                    style={{
+                      backgroundColor: "#25D366", // WhatsApp green
+                      color: "white",
+                      fontSize: "13px",
+                      borderRadius: "20px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    <FaWhatsapp className="me-2" />
+                    {quotationData.whatsappGroupName}
+                  </span>
+                </div>
+              )}
             </div>
+
             <div>
               <h6 className="fw-bold">Persons</h6>
               <div className="row g-3">
@@ -1169,7 +1254,7 @@ const BookingdetailsPage = () => {
         onHide={() => setShowPersonEditModal(false)}
       >
         <Modal.Header closeButton>
-          <Modal.Title>Edit Instagram handle</Modal.Title>
+          <Modal.Title>Edit Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
@@ -1209,7 +1294,8 @@ const BookingdetailsPage = () => {
                     value={personFormData.email}
                     onChange={handlePersonFormChange}
                     placeholder="Enter email"
-                    disabled
+                    // Only disable after update, not while typing
+                    disabled={!!editingPerson?.email}
                   />
                 </Form.Group>
               </Col>
@@ -1222,7 +1308,8 @@ const BookingdetailsPage = () => {
                     value={personFormData.profession}
                     onChange={handlePersonFormChange}
                     placeholder="Enter profession"
-                    disabled
+                    // Only disable after update, not while typing
+                    disabled={!!editingPerson?.profession}
                   />
                 </Form.Group>
               </Col>
@@ -1251,7 +1338,7 @@ const BookingdetailsPage = () => {
           >
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSavePersonDetails}>
+          <Button variant="dark" onClick={handleSavePersonDetails}>
             Save Changes
           </Button>
         </Modal.Footer>
@@ -1307,25 +1394,31 @@ const BookingdetailsPage = () => {
         </Card.Body>
 
         {/* Vendors Table */}
-        <Table className="vendor-table shadow-sm" striped hover responsive>
+        <Table
+          className="vendor-table shadow-sm"
+          striped
+          hover
+          responsive
+          style={{ tableLayout: "fixed", width: "100%" }} // force equal layout
+        >
           <thead>
             <tr>
-              <th>#</th>
-              <th>Service </th>
-              <th>Event</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Vendor</th>
-              <th>Assistant</th>
-              <th>Salary</th>   {/* ✅ new column */}
-              <th>Actions</th>
+              <th style={{ width: "5%" }}>#</th>
+              <th style={{ width: "15%" }}>Service</th>
+              <th style={{ width: "20%" }}>Event</th>
+              <th style={{ width: "10%" }}>Start Date</th>
+              <th style={{ width: "10%" }}>End Date</th>
+              <th style={{ width: "15%" }}>Vendor</th>
+              <th style={{ width: "15%" }}>Assistant</th>
+              <th style={{ width: "10%", textAlign: "right" }}>Salary</th>
+              <th style={{ width: "10%", textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center">
+                <td colSpan={9} className="text-center">
                   No rows
                 </td>
               </tr>
@@ -1351,24 +1444,26 @@ const BookingdetailsPage = () => {
                   <td>{dayjs(r.pkg.eventEndDate).format("DD-MM-YYYY")}</td>
 
                   {/* Vendor chip */}
-                  <td className="text-nowrap">
+                  <td>
                     {r.vendor?.vendorName ? (
                       <Chip tone="success">
                         <FaUserTie />
-                        <span>{r.vendor.vendorName}</span>
+                        <span className="chip-text">{r.vendor.vendorName}</span>
                       </Chip>
                     ) : (
                       <span className="text-muted">—</span>
                     )}
                   </td>
 
-                  {/* Assistant chip (only for candid services) */}
-                  <td className="text-nowrap">
+                  {/* Assistant chip */}
+                  <td>
                     {isCandidService(r.service.serviceName) ? (
                       r.assistant?.assistantName ? (
                         <Chip tone="primary">
                           <FaUserAlt />
-                          <span>{r.assistant.assistantName}</span>
+                          <span className="chip-text">
+                            {r.assistant.assistantName}
+                          </span>
                         </Chip>
                       ) : (
                         <span className="text-muted">—</span>
@@ -1378,13 +1473,13 @@ const BookingdetailsPage = () => {
                     )}
                   </td>
 
-                  <td>
+                  <td style={{ textAlign: "right" }}>
                     {r.vendor?.salary
                       ? `₹${Number(r.vendor.salary).toLocaleString()}`
                       : "—"}
                   </td>
 
-                  <td className="text-nowrap">
+                  <td className="text-nowrap" style={{ textAlign: "right" }}>
                     <OverlayTrigger
                       placement="top"
                       overlay={
@@ -1400,26 +1495,44 @@ const BookingdetailsPage = () => {
                         <FaExchangeAlt style={{ fontSize: "12px" }} />
                       </Button>
                     </OverlayTrigger>
+
                     <OverlayTrigger
                       placement="top"
                       overlay={
-                        <Tooltip id="tt-assign">{findCollectedForServiceUnit(r.pkg._id, r.service._id, r.unitIndex) ? "Edit Collected data" : "Collect Data"}</Tooltip>
+                        <Tooltip id="tt-collect">
+                          {findCollectedForServiceUnit(
+                            r.pkg._id,
+                            r.service._id,
+                            r.unitIndex
+                          )
+                            ? "Edit Collected data"
+                            : "Collect Data"}
+                        </Tooltip>
                       }
                     >
-
                       <Button
-
                         variant="light"
                         size="sm"
                         className="ms-1 btn-icon"
-                        onClick={() => handleOpenCollectForUnit(r.pkg, r.service, r.unitIndex)}
+                        onClick={() =>
+                          handleOpenCollectForUnit(
+                            r.pkg,
+                            r.service,
+                            r.unitIndex
+                          )
+                        }
                       >
-                        {findCollectedForServiceUnit(r.pkg._id, r.service._id, r.unitIndex) ? <BsCheckCircleFill style={{ fontSize: "16px" }} /> : <BsDatabaseFillAdd style={{ fontSize: "16px" }} />}
+                        {findCollectedForServiceUnit(
+                          r.pkg._id,
+                          r.service._id,
+                          r.unitIndex
+                        ) ? (
+                          <BsCheckCircleFill style={{ fontSize: "16px" }} />
+                        ) : (
+                          <BsDatabaseFillAdd style={{ fontSize: "16px" }} />
+                        )}
                       </Button>
                     </OverlayTrigger>
-
-
-
                   </td>
                 </tr>
               ))
@@ -1427,47 +1540,48 @@ const BookingdetailsPage = () => {
           </tbody>
         </Table>
 
-        {/* Collect Data Modal */}
         <Modal
-          show={showCollectDataModal} // <-- FIXED typo here
+          show={showCollectDataModal}
           onHide={() => {
             setShowCollectDataModal(false);
-            setSelectedVendor(null);
-            setSelectedServiceUnit(null);
             setEditMode(false);
           }}
           centered
-          size="lg"
+          size="xl"
         >
           <Modal.Header closeButton>
             <Modal.Title className="fw-bold" style={{ fontSize: "16px" }}>
-              {editMode ? "Edit Collected Data" : "Collect Data"} - {" "}
+              {editMode ? "Edit Collected Data" : "Collect Data"} -{" "}
               {selectedServiceUnit
                 ? selectedServiceUnit.serviceQty > 1
-                  ? `${selectedServiceUnit.serviceName} (unit ${Number(
-                    selectedServiceUnit.unitIndex
-                  ) + 1})`
+                  ? `${selectedServiceUnit.serviceName} (unit ${
+                      Number(selectedServiceUnit.unitIndex) + 1
+                    })`
                   : selectedServiceUnit.packageName
                 : selectedVendor?.eventName || "Event"}
               <span className="text-muted" style={{ fontSize: "12px" }}>
-                {" - "}{selectedServiceUnit?.serviceName}
+                {" - "}
+                {selectedServiceUnit?.serviceName}
               </span>
             </Modal.Title>
           </Modal.Header>
+
           <Modal.Body>
             <Form style={{ fontSize: "14px" }}>
               <Row className="g-3">
                 {/* Person Name */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Person Name</Form.Label>
+                    <Form.Label>
+                      Couples / Person Name{" "}
+                      <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="personName"
                       value={collectData.personName}
                       onChange={handleCollectDataChange}
-                      placeholder="Enter Person Name"
-                      readOnly={!!editMode || !!collectedDataList?.personName}
+                      placeholder="Enter Couples/Person Name"
                     />
                   </Form.Group>
                 </Col>
@@ -1475,7 +1589,9 @@ const BookingdetailsPage = () => {
                 {/* Camera Name */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Camera Name</Form.Label>
+                    <Form.Label>
+                      Camera Name <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="cameraName"
@@ -1489,7 +1605,10 @@ const BookingdetailsPage = () => {
                 {/* Total Drive Size */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Total Card/Drive/Pendrive Size</Form.Label>
+                    <Form.Label>
+                      Total Card/Drive/Pendrive Size{" "}
+                      <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="totalDriveSize"
@@ -1503,7 +1622,9 @@ const BookingdetailsPage = () => {
                 {/* Filled Size */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Filled Size</Form.Label>
+                    <Form.Label>
+                      Filled Size <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="filledSize"
@@ -1517,7 +1638,9 @@ const BookingdetailsPage = () => {
                 {/* Copying Person */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Person Copying Data</Form.Label>
+                    <Form.Label>
+                      Person Copying Data <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="copyingPerson"
@@ -1531,27 +1654,15 @@ const BookingdetailsPage = () => {
                 {/* System Number */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>System Number</Form.Label>
+                    <Form.Label>
+                      System Number <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="systemNumber"
                       value={collectData.systemNumber}
                       onChange={handleCollectDataChange}
                       placeholder="Enter System Number"
-                      readOnly={!!editMode || !!collectedDataList?.systemNumber}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>Backup System Number</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="backupSystemNumber"
-                      value={collectData.backupSystemNumber}
-                      onChange={handleCollectDataChange}
-                      placeholder="Enter System Number"
-                      readOnly={!!editMode || !!collectedDataList?.backupSystemNumber}
                     />
                   </Form.Group>
                 </Col>
@@ -1559,7 +1670,9 @@ const BookingdetailsPage = () => {
                 {/* Copied Location */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Copied Location</Form.Label>
+                    <Form.Label>
+                      Copied Location <span className="text-danger">*</span>
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       name="copiedLocation"
@@ -1569,6 +1682,22 @@ const BookingdetailsPage = () => {
                     />
                   </Form.Group>
                 </Col>
+
+                {/* Backup System Number */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Backup System Number</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="backupSystemNumber"
+                      value={collectData.backupSystemNumber}
+                      onChange={handleCollectDataChange}
+                      placeholder="Enter Backup System Number"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Backup Copied Location */}
                 <Col md={4}>
                   <Form.Group>
                     <Form.Label>Backup Copied Location</Form.Label>
@@ -1577,12 +1706,42 @@ const BookingdetailsPage = () => {
                       name="backupCopiedLocation"
                       value={collectData.backupCopiedLocation}
                       onChange={handleCollectDataChange}
-                      placeholder="Enter backup Copied Location"
+                      placeholder="Enter Backup Copied Location"
                     />
                   </Form.Group>
                 </Col>
 
-                {/* No. of Photos */}
+                {/* Backup Drive */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Backup Drive (Hard Disk / Pen Drive)
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="backupDrive"
+                      value={collectData.backupDrive}
+                      onChange={handleCollectDataChange}
+                      placeholder="Enter Backup Drive"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Drive Name */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Drive Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="driveName"
+                      value={collectData.driveName}
+                      onChange={handleCollectDataChange}
+                      placeholder="Enter Drive Name"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Photos */}
                 <Col md={4}>
                   <Form.Group>
                     <Form.Label>No. of Photos</Form.Label>
@@ -1595,8 +1754,30 @@ const BookingdetailsPage = () => {
                     />
                   </Form.Group>
                 </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>First Photo Clip Time</Form.Label>
+                    <Form.Control
+                      type="time"
+                      name="firstPhotoTime"
+                      value={collectData.firstPhotoTime}
+                      onChange={handleCollectDataChange}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Last Photo Clip Time</Form.Label>
+                    <Form.Control
+                      type="time"
+                      name="lastPhotoTime"
+                      value={collectData.lastPhotoTime}
+                      onChange={handleCollectDataChange}
+                    />
+                  </Form.Group>
+                </Col>
 
-                {/* No. of Videos */}
+                {/* Videos */}
                 <Col md={4}>
                   <Form.Group>
                     <Form.Label>No. of Videos</Form.Label>
@@ -1606,6 +1787,28 @@ const BookingdetailsPage = () => {
                       value={collectData.noOfVideos}
                       onChange={handleCollectDataChange}
                       placeholder="Enter No. of Videos"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>First Video Clip Time</Form.Label>
+                    <Form.Control
+                      type="time"
+                      name="firstVideoTime"
+                      value={collectData.firstVideoTime}
+                      onChange={handleCollectDataChange}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>Last Video Clip Time</Form.Label>
+                    <Form.Control
+                      type="time"
+                      name="lastVideoTime"
+                      value={collectData.lastVideoTime}
+                      onChange={handleCollectDataChange}
                     />
                   </Form.Group>
                 </Col>
@@ -1624,7 +1827,7 @@ const BookingdetailsPage = () => {
                 </Col>
 
                 {/* Notes */}
-                <Col md={4}>
+                <Col md={8}>
                   <Form.Group>
                     <Form.Label>Notes</Form.Label>
                     <Form.Control
@@ -1637,14 +1840,25 @@ const BookingdetailsPage = () => {
                   </Form.Group>
                 </Col>
               </Row>
+
+              {/* Quality Checkbox */}
+              <div className="d-flex mt-4 gap-1">
+                <Form.Check
+                  type="checkbox"
+                  label="Quality Checked"
+                  name="qualityChecked"
+                  checked={collectData.qualityChecked || false}
+                  onChange={handleCollectDataChange}
+                />
+              </div>
             </Form>
           </Modal.Body>
+
           <Modal.Footer className="justify-content-center">
             <Button
               variant="secondary"
               onClick={() => {
                 setShowCollectDataModal(false);
-                setSelectedVendor(null);
                 setEditMode(false);
               }}
               className="px-4"
@@ -1653,7 +1867,7 @@ const BookingdetailsPage = () => {
             </Button>
             <Button
               variant="dark"
-              onClick={handleCollectDataSubmit}
+              onClick={() => handleCollectDataSubmit(collectData)}
               className="px-4"
             >
               {editMode ? "Update" : "Submit"}
@@ -1797,19 +2011,54 @@ const BookingdetailsPage = () => {
               <strong>Album Total:</strong>
               <span>₹{albumSubtotal.toLocaleString()} </span>
             </div>
-            {/* {quotationData?.discountPercent && (
-              <> */}
+
             <div className="d-flex justify-content-between mb-2">
               <strong>Total Before Discount:</strong>
               <span>₹{totalBeforeDiscount.toLocaleString()} </span>
             </div>
-
-            <div className="d-flex justify-content-between mb-2">
-              <strong>Discount ({quotationData?.discountPercent}%)</strong>
-              <span>- ₹{discount.toLocaleString()}</span>
+            <div className="d-flex justify-content-between mb-2 align-items-center">
+              <strong>Discount:</strong>
+              {discountEditMode ? (
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-control"
+                    style={{ width: 120, textAlign: "right", fontWeight: 600 }}
+                    value={discountDraft}
+                    onChange={handleDiscountDraftChange}
+                  />
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={handleDiscountSave}
+                  >
+                    <FaSave />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleDiscountCancel}
+                  >
+                    <FaTimes />
+                  </Button>
+                </div>
+              ) : (
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ fontWeight: 600 }}>
+                    - ₹{Number(discountValue).toLocaleString()}
+                  </span>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={handleDiscountEditClick}
+                    style={{ padding: "2px 6px" }}
+                  >
+                    <FaEdit />
+                  </Button>
+                </div>
+              )}
             </div>
-            {/* </> */}
-            {/* )} */}
 
             <div className="d-flex justify-content-between mb-2">
               <strong>Sub Total:</strong>
@@ -1831,29 +2080,49 @@ const BookingdetailsPage = () => {
             </div>
 
             <hr />
+            {quotationData?.quoteNote && (
+              <div className="mt-2 fw-bold fs-6 bg-warning p-2 rounded bg-opacity-25">
+                Note : <span>{quotationData?.quoteNote || "N/A"}</span>
+              </div>
+            )}
+            <hr />
             {packageSubtotal > 0 && (
               <div>
                 <div className="d-flex justify-content-between text-primary">
                   <strong>Margin amount:</strong>
-                  <span>₹{totalMarginBeforeDiscount.toLocaleString()}</span>
+                  <span>
+                    ₹
+                    {marginTotals.totalMarginBeforeDiscountValue?.toLocaleString() ||
+                      "0"}
+                  </span>
                 </div>
                 <div className="d-flex justify-content-between text-primary">
-                  <strong>
-                    Margin after Discount ({quotationData?.discountPercent}%):
-                  </strong>
-                  <span>₹{marginAfterDiscount.toLocaleString()}</span>
+                  <strong>Margin Discount:</strong>
+                  <span>
+                    ₹{marginTotals.marginDiscountValue?.toLocaleString() || "0"}
+                  </span>
                 </div>
-
+                <div className="d-flex justify-content-between text-primary">
+                  <strong>Margin after Discount:</strong>
+                  <span>
+                    ₹
+                    {marginTotals.marginAfterDiscountValue?.toLocaleString() ||
+                      "0"}
+                  </span>
+                </div>
                 {quotationData?.gstApplied && (
                   <div className="d-flex justify-content-between text-primary">
                     <strong>GST on Margin (18%):</strong>
-                    <span>₹{marginGst.toLocaleString()}</span>
+                    <span>
+                      ₹{marginTotals.marginGstValue?.toLocaleString() || "0"}
+                    </span>
                   </div>
                 )}
-
                 <div className="d-flex justify-content-between text-success">
                   <strong>Final Margin Total:</strong>
-                  <span>₹{totalMarginFinal.toLocaleString()}</span>
+                  <span>
+                    ₹{marginTotals.totalMarginFinal?.toLocaleString() || "0"}
+                  </span>
                 </div>
               </div>
             )}
@@ -1932,12 +2201,13 @@ const BookingdetailsPage = () => {
                       <td>{inst.paymentMode || "-"}</td>
                       <td>
                         <span
-                          className={`badge ${inst.status === "Completed"
-                            ? "bg-success"
-                            : inst.status === "Partial Paid"
+                          className={`badge ${
+                            inst.status === "Completed"
+                              ? "bg-success"
+                              : inst.status === "Partial Paid"
                               ? "bg-primary" // Custom class defined in your CSS
                               : "bg-danger"
-                            }`}
+                          }`}
                         >
                           {inst.status}
                         </span>
@@ -1945,8 +2215,8 @@ const BookingdetailsPage = () => {
                       <td>
                         {inst.accountHolders && inst.accountHolders.length > 0
                           ? inst.accountHolders.map((h, i) => (
-                            <div key={i}>{h.name}</div>
-                          ))
+                              <div key={i}>{h.name}</div>
+                            ))
                           : "-"}
                       </td>
 
@@ -2023,6 +2293,81 @@ const BookingdetailsPage = () => {
           </div>
         </Card>
       )}
+
+      {/* Add note/whatsapp group modal */}
+      <Modal
+        show={showActionModal}
+        onHide={() => setShowActionModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {actionType === "group" ? "Add WhatsApp Group" : "Add Note"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>
+                {actionType === "group" ? "WhatsApp Group Name" : "Note"}
+              </Form.Label>
+              <Form.Control
+                type="text"
+                placeholder={
+                  actionType === "group"
+                    ? "Enter WhatsApp group name"
+                    : "Enter note"
+                }
+                value={actionValue}
+                onChange={(e) => setActionValue(e.target.value)}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowActionModal(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="dark"
+            onClick={async () => {
+              try {
+                // ✅ Build payload dynamically
+                const payload =
+                  actionType === "group"
+                    ? { whatsappGroupName: actionValue }
+                    : { note: actionValue };
+
+                if (!actionValue.trim()) {
+                  toast.error("Please enter a value before saving");
+                  return;
+                }
+
+                // ✅ Call unified API
+                const res = await axios.put(
+                  `http://localhost:5000/api/quotations/${id}/group-note`,
+                  payload
+                );
+
+                fetchQuotation();
+                toast.success(
+                  `${
+                    actionType === "group" ? "Group name" : "Note"
+                  } saved successfully!`
+                );
+                setShowActionModal(false);
+                setActionValue(""); // reset field
+              } catch (err) {
+                console.error("Save group/note error:", err);
+                toast.error("Failed to save");
+              }
+            }}
+          >
+            Save
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       {/* Payment Modal */}
       <Modal show={showPaymentModal} onHide={() => setShowPaymentModal(false)}>
         <Modal.Header closeButton>
@@ -2030,108 +2375,126 @@ const BookingdetailsPage = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            {/* Payment Date */}
-            <div className="mb-3">
-              <Form.Label>Payment Date</Form.Label>
-              <Form.Control
-                type="date"
-                value={paymentData.paymentDate}
-                onChange={(e) =>
-                  setPaymentData({
-                    ...paymentData,
-                    paymentDate: e.target.value,
-                  })
-                }
-              />
+            <div className="row">
+              <div className="col-md-6">
+                <Form.Group className="mb-3">
+                  <Form.Label>Payment Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={paymentData.paymentDate}
+                    onChange={(e) =>
+                      setPaymentData({
+                        ...paymentData,
+                        paymentDate: e.target.value,
+                      })
+                    }
+                  />
+                </Form.Group>
+              </div>
+              <div className="col-md-6">
+                <Form.Group className="mb-3">
+                  <Form.Label>Payment Mode</Form.Label>
+                  <Form.Select
+                    value={paymentData.paymentMode}
+                    onChange={(e) =>
+                      setPaymentData({
+                        ...paymentData,
+                        paymentMode: e.target.value,
+                      })
+                    }
+                  >
+                    {paymentModes.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </div>
             </div>
 
-            {/* Payment Mode */}
-            <div className="mb-3">
-              <Form.Label>Payment Mode</Form.Label>
-              <Form.Select
-                value={paymentData.paymentMode}
-                onChange={(e) =>
-                  setPaymentData({
-                    ...paymentData,
-                    paymentMode: e.target.value,
-                  })
-                }
-              >
-                <option value="Cash">Cash</option>
-                <option value="Online">Online</option>
-                <option value="Cheque">Cheque</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-              </Form.Select>
+            <div className="row">
+              <div className="col-md-6">
+                <Form.Group className="mb-3">
+                  <Form.Label>Pending Amount to Pay</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    max={selectedInstallment?.pendingAmount || 1}
+                    value={paymentData.amount}
+                    onChange={(e) => {
+                      let val = Number(e.target.value);
+                      const max = selectedInstallment?.pendingAmount || 1;
+                      if (val > max) val = max;
+                      if (val < 1) val = 1;
+                      setPaymentData({ ...paymentData, amount: val });
+                    }}
+                    className="fw-bold"
+                  />
+                  <Form.Text muted>
+                    Max: ₹{selectedInstallment?.pendingAmount?.toLocaleString()}
+                  </Form.Text>
+                </Form.Group>
+              </div>
+              <div className="col-md-6">
+                <Form.Group className="mb-3">
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select
+                    value={paymentData.status}
+                    onChange={(e) =>
+                      setPaymentData({
+                        ...paymentData,
+                        status: e.target.value,
+                      })
+                    }
+                  >
+                    {statusOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </div>
             </div>
 
-            {/* Amount (auto-filled, read-only) */}
-            <div className="mb-3">
-              <Form.Label>Installment Amount</Form.Label>
-              <Form.Control
-                type="text"
-                value={`₹${paymentData.amount}`}
-                readOnly
-                className="fw-bold"
-              />
-            </div>
-
-            {/* Status */}
-            <div className="mb-3">
-              <Form.Label>Status</Form.Label>
-              <Form.Select
-                value={paymentData.status}
-                onChange={(e) =>
-                  setPaymentData({ ...paymentData, status: e.target.value })
-                }
-              >
-                {statusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </Form.Select>
-            </div>
-
-            {/* Existing Account Holders (names only) */}
-            <div className="mb-3">
-              <Form.Label>Already Recorded Holders</Form.Label>
-              {existingHolders.length > 0 ? (
+            {/* Existing account holders list (read-only) */}
+            {existingHolders.length > 0 && (
+              <Form.Group className="mb-3">
+                <Form.Label>Already Recorded Account Holders</Form.Label>
                 <div className="border rounded p-2">
                   {existingHolders.map((h, idx) => (
                     <div key={idx}>{h.name}</div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-muted">No holders yet.</div>
-              )}
-            </div>
+              </Form.Group>
+            )}
 
-            {/* New Account Holder (only name) */}
-            <div className="mb-3">
+            {/* New account holder (only name, no amount) */}
+            <Form.Group className="mb-3">
               <Form.Label>Add Account Holder</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Enter account holder name"
-                value={newHolders[0]?.name}
-                onChange={
-                  (e) => setNewHolders([{ name: e.target.value }]) // ✅ only name
-                }
+                value={newHolder.name}
+                onChange={(e) => setNewHolder({ name: e.target.value })}
               />
-            </div>
+            </Form.Group>
           </Form>
-
           <hr />
-
-          {/* Totals */}
           <div className="text-center">
-            <h5>
-              Total Amount: ₹
+            <div>
+              <strong>Total Installment Amount:</strong> ₹
               {selectedInstallment?.paymentAmount?.toLocaleString()}
-            </h5>
-            <h6>
-              Pending Amount: ₹
+            </div>
+            <div>
+              <strong>Pending Amount:</strong> ₹
               {selectedInstallment?.pendingAmount?.toLocaleString()}
-            </h6>
+            </div>
+            <div>
+              <strong>Paid Amount:</strong> ₹
+              {selectedInstallment?.paidAmount?.toLocaleString()}
+            </div>
           </div>
         </Modal.Body>
         <Modal.Footer>

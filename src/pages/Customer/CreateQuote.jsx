@@ -9,12 +9,15 @@ import {
   Badge,
   Row,
 } from "react-bootstrap";
+
 import {
   FaCheckCircle,
   FaEdit,
   FaTrash,
   FaSave,
   FaTimesCircle,
+  FaCopy,
+  FaStickyNote,
 } from "react-icons/fa";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -117,7 +120,7 @@ const CreateQuote = () => {
   const [packages, setPackages] = useState([]);
   const [presetData, setPresetData] = useState([]);
 
-  const [discountPer, setDiscountPer] = useState(0);
+  // const [discountPer, setDiscountPer] = useState(0);
   const [discountValue, setDiscountValue] = useState(0);
   const [gstValue, setGstValue] = useState(0);
   const [totalAfterDiscount, setTotalAfterDiscount] = useState(0);
@@ -162,8 +165,9 @@ const CreateQuote = () => {
   // Derived flag: a "free" quote (100% discount or computed total is 0)
   const isZeroTotal = React.useMemo(
     () =>
-      Math.round(Number(grandTotal || 0)) === 0 || Number(discountPer) >= 100,
-    [grandTotal, discountPer]
+      Math.round(Number(grandTotal || 0)) === 0 ||
+      Number(discountValue) >= totalBeforeDiscount,
+    [grandTotal, discountValue, totalBeforeDiscount]
   );
 
   const albumSubtotal = useMemo(
@@ -243,45 +247,6 @@ const CreateQuote = () => {
     }
   }, [isZeroTotal]);
 
-  // Add or update installment
-  const handleSaveInstallment = () => {
-    const perc = parseFloat(newInstallmentPercentage);
-    if (!newInstallmentName || isNaN(perc) || perc <= 0) {
-      toast.error("Please enter a valid name and percentage.");
-      return;
-    }
-    if (editingInstallmentIndex !== null) {
-      // Update
-      setInstallments((insts) =>
-        insts.map((inst, idx) =>
-          idx === editingInstallmentIndex
-            ? {
-                ...inst,
-                name: newInstallmentName,
-                percentage: perc,
-                amount: Math.round((perc / 100) * grandTotal),
-              }
-            : inst
-        )
-      );
-    } else {
-      // Add
-      setInstallments((insts) => [
-        ...insts,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          name: newInstallmentName,
-          percentage: perc,
-          amount: Math.round((perc / 100) * grandTotal),
-        },
-      ]);
-    }
-    setShowInstallmentModal(false);
-    setEditingInstallmentIndex(null);
-    setNewInstallmentName("");
-    setNewInstallmentPercentage("");
-  };
-
   const handleEditInstallment = (index) => {
     setEditingInstallmentIndex(index);
     setNewInstallmentName(installments[index].name);
@@ -293,8 +258,8 @@ const CreateQuote = () => {
     setInstallments((insts) => insts.filter((_, idx) => idx !== index));
   };
 
+  // === Recalculate totals ===
   useEffect(() => {
-    // 1) Package totals (existing)
     const packageTotal = packages.reduce(
       (sum, pkg) =>
         sum +
@@ -317,41 +282,25 @@ const CreateQuote = () => {
       0
     );
 
-    // 2) New: include albums BEFORE discount
     const beforeDiscount = packageTotal + (albumSubtotal || 0);
-
-    // 3) Discount
-    const discPct = Number(discountPer) || 0;
-    const discount = (beforeDiscount * discPct) / 100;
-
-    // 4) Totals after discount (before GST)
+    const discount = Number(discountValue) || 0;
     const afterDiscount = beforeDiscount - discount;
-
-    // 5) GST on after-discount
     const gst = isGstApplied ? afterDiscount * 0.18 : 0;
-
-    // 6) Grand Total = after-discount + GST
     const grand = afterDiscount + gst;
 
-    // --- Margin side stays package-based (albums currently have no margin fields) ---
-    const marginDiscount = (packageMargin * discPct) / 100;
-    const marginAfterDisc = packageMargin - marginDiscount;
+    const marginAfterDisc = packageMargin; // albums don't affect margin
     const marginGst = isGstApplied ? marginAfterDisc * 0.18 : 0;
     const totalMargin = marginAfterDisc + marginGst;
 
-    // 7) Commit
     setTotalBeforeDiscount(Math.round(beforeDiscount));
     setDiscountValue(Math.round(discount));
-    setTotalAfterDiscount(Math.round(afterDiscount)); // now strictly "after discount, before GST"
+    setTotalAfterDiscount(Math.round(afterDiscount));
     setGstValue(Math.round(gst));
     setGrandTotal(Math.round(grand));
-
     setMarginAfterDiscount(Math.round(marginAfterDisc));
     setMarginGstValue(Math.round(marginGst));
     setTotalMarginFinal(Math.round(totalMargin));
-  }, [packages, albumSubtotal, discountPer, isGstApplied]);
-
-  const handleGstToggle = () => setIsGstApplied(!isGstApplied);
+  }, [packages, albumSubtotal, discountValue, isGstApplied]);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -376,6 +325,7 @@ const CreateQuote = () => {
         toast.error("Failed to fetch categories");
       }
     };
+
     const fetchServices = async () => {
       try {
         const resServices = await axios.get(
@@ -472,7 +422,7 @@ const CreateQuote = () => {
           );
           setQuoteTitle(selectedQuotation.quoteTitle || "");
           setQuoteDescription(selectedQuotation.quoteDescription || "");
-          setDiscountPer(selectedQuotation.discountPercent ?? 0);
+          // setDiscountPer(selectedQuotation.discountPercent ?? 0);
           setIsGstApplied(!!selectedQuotation.gstApplied);
           setGstValue(selectedQuotation.gstValue ?? 0);
           setDiscountValue(selectedQuotation.discountValue ?? 0);
@@ -494,6 +444,7 @@ const CreateQuote = () => {
       setCurrentQuotationId(null);
     }
   }
+
   // Fetch quotations for this queryId
   useEffect(() => {
     fetchQuotations();
@@ -507,8 +458,9 @@ const CreateQuote = () => {
       setInstallments([]);
       setQuoteTitle("");
       setQuoteDescription("");
-      setNote(""), setDiscountPer(0);
-      setIsGstApplied(false);
+      setNote(""),
+        // setDiscountPer(0);
+        setIsGstApplied(false);
       setGstValue(0);
       setDiscountValue(0);
       setTotalAfterDiscount(0);
@@ -544,16 +496,14 @@ const CreateQuote = () => {
       setCurrentQuotationId(quotation._id);
       setQuoteTitle(quotation.quoteTitle || "");
       setQuoteDescription(quotation.quoteDescription || "");
-      setDiscountPer(quotation.discountPercent ?? 0);
+      // setDiscountPer(quotation.discountPercent ?? 0);
       setIsGstApplied(!!quotation.gstApplied);
       setNote(quotation.quoteNote || "");
       setAlbums(quotation.albums || []);
       toast.success(`"${quotation.quoteTitle}" selected`);
     }
   };
-  const handleEditQuotation = (id) => {
-    toast("Edit Quotation " + id);
-  };
+
   const handleFinalizeQuotation = async (id) => {
     try {
       const res = await axios.patch(
@@ -605,8 +555,6 @@ const CreateQuote = () => {
     }
   };
 
-  console.log("savedQuotations", savedQuotations);
-
   // Custom Modal Handlers
   const openCustomModal = () => {
     setShowCustomModal(true);
@@ -631,40 +579,9 @@ const CreateQuote = () => {
       services.map((s) => (s.id === id ? { ...s, checked: !s.checked } : s))
     );
   };
-  const handleServicePrice = (id, value) => {
-    setServices(
-      services.map((s) => (s.id === id ? { ...s, price: value } : s))
-    );
-  };
-  const handleServiceMarginPrice = (id, value) => {
-    setServices(
-      services.map((s) => (s.id === id ? { ...s, marginPrice: value } : s))
-    );
-  };
+
   const handleServiceQty = (id, value) => {
     setServices(services.map((s) => (s.id === id ? { ...s, qty: value } : s)));
-  };
-  const handleCreateCustomPackage = () => {
-    const selectedServices = services.filter((s) => s.checked);
-    if (!selectedCategory || selectedServices.length === 0) {
-      toast.error("Please select a category and at least one service.");
-      return;
-    }
-    setPackages([
-      ...packages,
-      {
-        type: "custom",
-        category: selectedCategory.label,
-        categoryId: selectedCategory.value,
-        slot: selectedSlot?.value || "",
-        eventStartDate,
-        eventEndDate,
-        venueName,
-        venueAddress,
-        services: selectedServices,
-      },
-    ]);
-    closeCustomModal();
   };
 
   // Preset Modal Handlers
@@ -724,28 +641,6 @@ const CreateQuote = () => {
       presetServices.map((s) => (s.id === id ? { ...s, qty: value } : s))
     );
   };
-  const handleCreatePresetPackage = () => {
-    const selectedServices = presetServices.filter((s) => s.checked);
-    if (!presetCategory || selectedServices.length === 0) {
-      toast.error("Please select a category and at least one service.");
-      return;
-    }
-    setPackages([
-      ...packages,
-      {
-        type: "preset",
-        category: presetCategory.label,
-        categoryId: presetCategory.value,
-        slot: presetSlot?.value || "",
-        eventStartDate: presetEventStartDate,
-        eventEndDate: presetEventEndDate,
-        venueName: presetVenueName,
-        venueAddress: presetVenueAddress,
-        services: selectedServices,
-      },
-    ]);
-    closePresetModal();
-  };
 
   // Prepare react-select options
   const categoryOptions = [
@@ -757,6 +652,7 @@ const CreateQuote = () => {
     { value: "Afternoon (12PM - 5PM)", label: "Afternoon (12PM - 5PM)" },
     { value: "Evening (5PM - 9PM)", label: "Evening (5PM - 9PM)" },
     { value: "Midnight (9PM - 12AM)", label: "Midnight (9PM - 12AM)" },
+    { value: "Full Day", label: "Full Day" },
     { value: "others", label: "Others" },
   ];
 
@@ -771,6 +667,7 @@ const CreateQuote = () => {
       setEventEndDate(pkg.eventEndDate || "");
       setVenueName(pkg.venueName || "");
       setVenueAddress(pkg.venueAddress || "");
+
       // Robustly match services by id, _id, or serviceId
       setServices(
         servicesList.map((s) => {
@@ -779,7 +676,8 @@ const CreateQuote = () => {
               (ps.id && (ps.id === s.id || ps.id === s._id)) ||
               (ps._id && (ps._id === s.id || ps._id === s._id)) ||
               (ps.serviceId &&
-                (ps.serviceId === s.id || ps.serviceId === s._id))
+                (ps.serviceId === s.id || ps.serviceId === s._id)) ||
+              (ps.serviceName && ps.serviceName === s.name)
           );
           return found
             ? {
@@ -803,7 +701,34 @@ const CreateQuote = () => {
       setPresetVenueName(pkg.venueName || "");
       setPresetVenueAddress(pkg.venueAddress || "");
       // Set preset services, preserving price, qty, marginPrice, etc.
-      setPresetServices(pkg.services.map((s) => ({ ...s, checked: true })));
+      setPresetServices(
+        servicesList
+          .filter((s) =>
+            pkg.services.some(
+              (ps) =>
+                (ps.serviceId && ps.serviceId === s.id) ||
+                (ps.id && ps.id === s.id) ||
+                (ps.serviceName && ps.serviceName === s.name)
+            )
+          )
+          .map((s) => {
+            const found = pkg.services.find(
+              (ps) =>
+                (ps.serviceId && ps.serviceId === s.id) ||
+                (ps.id && ps.id === s.id) ||
+                (ps.serviceName && ps.serviceName === s.name)
+            );
+            return found
+              ? {
+                  ...s,
+                  checked: true,
+                  qty: found.qty,
+                  price: found.price,
+                  marginPrice: found.marginPrice,
+                }
+              : { ...s, checked: false, qty: 1 };
+          })
+      );
     }
   };
 
@@ -813,9 +738,7 @@ const CreateQuote = () => {
       !selectedCategory ||
       !selectedSlot ||
       !eventStartDate ||
-      !eventEndDate ||
-      !venueName ||
-      !venueAddress
+      !eventEndDate
     ) {
       alert("Please fill all required fields");
       return;
@@ -885,16 +808,21 @@ const CreateQuote = () => {
     closePresetModal();
   };
 
-  // In the Installment Modal, calculate availablePercentage
-  // const availablePercentage =
-  //   editingInstallmentIndex !== null
-  //     ? 100 -
-  //       installments.reduce(
-  //         (sum, inst, idx) =>
-  //           idx !== editingInstallmentIndex ? sum + inst.percentage : sum,
-  //         0
-  //       )
-  //     : 100 - installments.reduce((sum, inst) => sum + inst.percentage, 0);
+  const venueNameSuggestions = useMemo(() => {
+    // Unique, non-empty venue names from all packages
+    const names = packages
+      .map((pkg) => pkg.venueName?.trim())
+      .filter((v) => v && v.length > 0);
+    return [...new Set(names)];
+  }, [packages]);
+
+  const venueAddressSuggestions = useMemo(() => {
+    // Unique, non-empty venue addresses from all packages
+    const addresses = packages
+      .map((pkg) => pkg.venueAddress?.trim())
+      .filter((v) => v && v.length > 0);
+    return [...new Set(addresses)];
+  }, [packages]);
 
   const baseAvail =
     editingInstallmentIndex !== null
@@ -996,8 +924,7 @@ const CreateQuote = () => {
 
           totalPackageAmt: totalPackageAmount,
           totalAmount: grandTotal,
-          discountPercent: discountPer,
-          discountValue,
+          discountValue: discountValue,
           gstApplied: isGstApplied,
           gstValue,
           totalAfterDiscount,
@@ -1021,7 +948,7 @@ const CreateQuote = () => {
       setPackages([]);
       setInstallments([]);
       setCurrentQuotationId(null);
-      setDiscountPer(0);
+      // setDiscountPer(0);
       setIsGstApplied(false);
       setGstValue(0);
       setDiscountValue(0);
@@ -1079,8 +1006,7 @@ const CreateQuote = () => {
 
           totalPackageAmt: totalPackageAmount,
           totalAmount: grandTotal,
-          discountPercent: discountPer,
-          discountValue,
+          discountValue: discountValue,
           gstApplied: isGstApplied,
           gstValue,
           totalAfterDiscount,
@@ -1105,7 +1031,7 @@ const CreateQuote = () => {
       setPackages([]);
       setInstallments([]);
       setCurrentQuotationId(null);
-      setDiscountPer(0);
+      // setDiscountPer(0);
       setIsGstApplied(false);
       setGstValue(0);
       setDiscountValue(0);
@@ -1147,19 +1073,119 @@ const CreateQuote = () => {
 
   const handleSaveNotes = (noteInp) => {
     setNote(noteInp);
-
-    // Here you can make an API call to save the notes
-    // For example: await axios.post('/api/notes', { notes });
   };
 
-  // console.log("note:", note)
+  const handleDuplicateQuotation = async (quotationId) => {
+    const quotation = savedQuotations.find((q) => q._id === quotationId);
+    if (!quotation) return;
+
+    // Deep clone all fields and remove only _id/id from all nested objects
+    const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+    // Clean function to remove id/_id from any object
+    const cleanIds = (obj) => {
+      if (Array.isArray(obj)) {
+        return obj.map(cleanIds);
+      } else if (obj && typeof obj === "object") {
+        const { id, _id, ...rest } = obj;
+        Object.keys(rest).forEach((key) => {
+          rest[key] = cleanIds(rest[key]);
+        });
+        return rest;
+      }
+      return obj;
+    };
+
+    // Clone and clean packages, services, installments, albums
+    const clonedPackages = cleanIds(deepClone(quotation.packages || []));
+    const clonedInstallments = cleanIds(
+      deepClone(quotation.installments || [])
+    );
+    const clonedAlbums = cleanIds(deepClone(quotation.albums || []));
+
+    try {
+      await axios.post(`http://localhost:5000/api/quotations/create`, {
+        leadId: quotation.leadId,
+        queryId: quotation.queryId,
+        quoteTitle: `${quotation.quoteTitle} (Copy)`,
+        quoteDescription: quotation.quoteDescription,
+        quoteNote: quotation.quoteNote,
+        packages: clonedPackages,
+        installments: clonedInstallments,
+        totalPackageAmt: quotation.totalPackageAmt,
+        totalAmount: quotation.totalAmount,
+        discountValue: quotation.discountValue,
+        gstApplied: quotation.gstApplied,
+        gstValue: quotation.gstValue,
+        totalAfterDiscount: quotation.totalAfterDiscount,
+        marginAmount: quotation.marginAmount ?? quotation.totalMarginFinal,
+        marginAfterDiscount: quotation.marginAfterDiscount,
+        marginGstValue: quotation.marginGstValue,
+        totalMarginFinal: quotation.totalMarginFinal,
+        finalized: false,
+        albums: clonedAlbums,
+        totalAlbumAmount: quotation.totalAlbumAmount,
+      });
+      toast.success("Quotation duplicated successfully!");
+      await fetchQuotations();
+    } catch (err) {
+      toast.error("Failed to duplicate quotation");
+      console.error(err);
+    }
+  };
+
+  const missingVenuePackages = useMemo(() => {
+    if (!currentQuotationId || packages.length === 0) return [];
+    return packages
+      .map((pkg, idx) => ({
+        idx,
+        category: pkg.category,
+        venueName: pkg.venueName,
+        venueAddress: pkg.venueAddress,
+      }))
+      .filter((pkg) => !pkg.venueName?.trim() || !pkg.venueAddress?.trim());
+  }, [currentQuotationId, packages]);
 
   return (
     <div
-      className="container mt-4 mb-5"
+      className="container mb-5"
       style={{ fontFamily: "Poppins, sans-serif", fontSize: "14px" }}
     >
-      <div className="container my-4">
+      <div className="container ">
+        <div className="alert alert-danger fw-semibold sticky-top" role="alert">
+          <span>
+            <strong>Important:</strong> Please <u>save the quotation</u> before
+            going to another page. If you leave without saving, your changes
+            will be lost.
+          </span>
+        </div>
+
+        {currentQuotationId && missingVenuePackages.length > 0 && (
+          <div className="alert alert-warning fw-semibold mb-3">
+            <span>
+              <strong>
+                Please add the <u>Venue Name</u> and <u>Venue Address</u> for
+                all packages before confirming the booking.
+              </strong>
+              <br />
+              Missing in:
+              <ul className="mb-0">
+                {missingVenuePackages.map((pkg) => (
+                  <li key={pkg.idx}>
+                    <strong>{pkg.category || `Package ${pkg.idx + 1}`}</strong>
+                    {(!pkg.venueName?.trim() || !pkg.venueAddress?.trim()) && (
+                      <>
+                        {!pkg.venueName?.trim()}
+                        {!pkg.venueAddress?.trim()}
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </span>
+          </div>
+        )}
+
         {/* Lead Details Section */}
         <Card
           className="p-3 mb-3 border-0 shadow-sm"
@@ -1203,11 +1229,13 @@ const CreateQuote = () => {
                   <FaEdit style={{ fontSize: "18px" }} />
                 </Button>
               )}
+
               <Button
-                variant="outline-dark"
+                variant="dark"
+                size="sm"
                 onClick={() => setShowNotesModal(true)}
               >
-                {note ? "Edit Note" : " Add Note"}
+                <FaStickyNote /> {note ? "Edit Note" : " Add Note"}
               </Button>
             </div>
           </div>
@@ -1357,6 +1385,9 @@ const CreateQuote = () => {
                   current one, then click{" "}
                   <FaCheckCircle className="text-success" /> to finalize a
                   different quotation.
+                  <br />
+                  <FaCopy className="text-secondary" /> Duplicate icon lets you
+                  copy a quotation for editing.
                 </small>
               </div>
               <Table bordered hover responsive className="mb-0">
@@ -1419,6 +1450,18 @@ const CreateQuote = () => {
                         )}
                       </td>
                       <td className="text-center">
+                        {/* Duplicate Icon */}
+                        <Button
+                          variant="link"
+                          className="text-secondary p-0 mx-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateQuotation(quotation._id);
+                          }}
+                          title="Duplicate Quotation"
+                        >
+                          <FaCopy />
+                        </Button>
                         {quotation.finalized ? (
                           <Button
                             variant="link"
@@ -1478,7 +1521,9 @@ const CreateQuote = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label>Select Category</Form.Label>
+                    <Form.Label>
+                      Select Category<span style={{ color: "Red" }}>*</span>
+                    </Form.Label>
                     <Select
                       options={categoryOptions}
                       value={selectedCategory}
@@ -1500,7 +1545,9 @@ const CreateQuote = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label>Choose Slot</Form.Label>
+                    <Form.Label>
+                      Choose Slot<span style={{ color: "Red" }}>*</span>
+                    </Form.Label>
                     <Select
                       options={slotOptions}
                       value={selectedSlot}
@@ -1527,7 +1574,9 @@ const CreateQuote = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label>Event Start Date</Form.Label>
+                    <Form.Label>
+                      Event Start Date<span style={{ color: "Red" }}>*</span>
+                    </Form.Label>
                     <Form.Control
                       type="date"
                       value={eventStartDate}
@@ -1538,7 +1587,9 @@ const CreateQuote = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label>Event End Date</Form.Label>
+                    <Form.Label>
+                      Event End Date<span style={{ color: "Red" }}>*</span>
+                    </Form.Label>
                     <Form.Control
                       type="date"
                       value={eventEndDate}
@@ -1556,19 +1607,32 @@ const CreateQuote = () => {
                       type="text"
                       value={venueName}
                       onChange={(e) => setVenueName(e.target.value)}
-                      required
+                      list="venue-name-suggestions"
+                      autoComplete="off"
                     />
+                    <datalist id="venue-name-suggestions">
+                      {venueNameSuggestions.map((name, idx) => (
+                        <option value={name} key={idx} />
+                      ))}
+                    </datalist>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label>Venue Address</Form.Label>
+                    {/* // Venue Address input */}
                     <Form.Control
                       type="text"
                       value={venueAddress}
                       onChange={(e) => setVenueAddress(e.target.value)}
-                      required
+                      list="venue-address-suggestions"
+                      autoComplete="off"
                     />
+                    <datalist id="venue-address-suggestions">
+                      {venueAddressSuggestions.map((addr, idx) => (
+                        <option value={addr} key={idx} />
+                      ))}
+                    </datalist>
                   </Form.Group>
                 </Col>
               </Row>
@@ -1916,27 +1980,25 @@ const CreateQuote = () => {
                           {formatDate(pkg.eventStartDate)} -{" "}
                           {formatDate(pkg.eventEndDate)}, {pkg.slot}
                         </p>
-                        {(pkg.venueName || pkg.venueAddress) && (
-                          <div className="mb-4">
-                            {pkg.venueName && (
-                              <p className="mb-1" style={{ lineHeight: "1.2" }}>
-                                <strong>Venue:</strong> {pkg.venueName}
-                              </p>
-                            )}
-                            {pkg.venueAddress && (
-                              <p
-                                className="mb-0"
-                                style={{
-                                  lineHeight: "1.2",
-                                  maxWidth: "400px",
-                                  wordWrap: "break-word",
-                                }}
-                              >
-                                <strong>Address:</strong> {pkg.venueAddress}
-                              </p>
-                            )}
-                          </div>
-                        )}
+
+                        <div className="mb-4">
+                          <p className="mb-1" style={{ lineHeight: "1.2" }}>
+                            <strong>Venue:</strong>{" "}
+                            {pkg.venueName && pkg.venueName}
+                          </p>
+
+                          <p
+                            className="mb-0"
+                            style={{
+                              lineHeight: "1.2",
+                              maxWidth: "400px",
+                              wordWrap: "break-word",
+                            }}
+                          >
+                            <strong>Address:</strong>{" "}
+                            {pkg.venueAddress && pkg.venueAddress}
+                          </p>
+                        </div>
                       </div>
                       <div className="d-flex gap-2 flex-column">
                         <Button
@@ -2076,7 +2138,6 @@ const CreateQuote = () => {
                   albumDetailsIndex != null ? albums[albumDetailsIndex] : null
                 }
               />
-
               <Card className="mb-4 shadow-sm w-100">
                 <div className="p-4">
                   <div className="d-flex justify-content-between">
@@ -2100,7 +2161,7 @@ const CreateQuote = () => {
                     </p>
                   </div>
 
-                  {totalPackageAmount != 0 && (
+                  {totalPackageAmount !== 0 && (
                     <div className="d-flex justify-content-between">
                       <p className="fw-bold">Total Margin Amount</p>
                       <p className="fw-bold">
@@ -2114,6 +2175,7 @@ const CreateQuote = () => {
 
                   <hr />
 
+                  {/* === Discount Section (Value only) === */}
                   <div>
                     <div className="d-flex justify-content-between align-items-center">
                       <p className="mb-0">Discount</p>
@@ -2125,13 +2187,13 @@ const CreateQuote = () => {
                         }}
                       >
                         <input
-                          placeholder="Add discount"
+                          type="text"
+                          placeholder="Add discount amount"
                           onChange={(e) => {
                             const value = e.target.value.replace(/[^0-9]/g, "");
-                            setDiscountPer(value);
+                            setDiscountValue(Number(value) || 0);
                           }}
-                          value={discountPer}
-                          className=""
+                          value={discountValue}
                           style={{
                             outline: "none",
                             width: "140px",
@@ -2141,7 +2203,6 @@ const CreateQuote = () => {
                             background: "transparent",
                           }}
                         />
-                        %
                       </div>
                     </div>
 
@@ -2153,26 +2214,24 @@ const CreateQuote = () => {
                       </div>
                     )}
 
-                    {/* GST row remains, uses gstValue */}
+                    {/* GST Row */}
                     <div className="d-flex justify-content-between align-items-center mt-2">
-                      <div className="d-flex align-items-center">
-                        <input
-                          type="checkbox"
-                          checked={isGstApplied}
-                          onChange={handleGstToggle}
-                          style={{ marginRight: "10px", cursor: "pointer" }}
-                        />
-                        <p className="mb-0" style={{ fontSize: "18px" }}>
-                          GST <span style={{ fontSize: "16px" }}>18%</span>
-                        </p>
-                      </div>
-                      <p className="mb-0">₹{gstValue.toLocaleString()}</p>
+                      <Form.Check
+                        type="checkbox"
+                        id="gst-check"
+                        label="Apply GST (18%)"
+                        checked={isGstApplied}
+                        onChange={(e) => setIsGstApplied(e.target.checked)}
+                      />
+                      <span className="fw-bold">
+                        ₹{gstValue.toLocaleString()}
+                      </span>
                     </div>
                   </div>
 
                   <hr />
 
-                  {/* Grand Total now uses grandTotal */}
+                  {/* Grand Total */}
                   <div className="d-flex justify-content-between text-success">
                     <p className="">Grand Total</p>
                     <p className="fw-semibold">
@@ -2180,9 +2239,15 @@ const CreateQuote = () => {
                     </p>
                   </div>
 
+                  {note && (
+                    <div className="mt-1 fw-bold fs-6 bg-warning p-2 rounded bg-opacity-25">
+                      Note : <span>{note || "N/A"}</span>
+                    </div>
+                  )}
+
                   <hr />
 
-                  {totalPackageAmount != 0 && (
+                  {totalPackageAmount !== 0 && (
                     <div className="d-flex justify-content-between text-primary">
                       <p className="">Margin after Discount</p>
                       <p className="fw-semibold">
@@ -2194,7 +2259,7 @@ const CreateQuote = () => {
                     </div>
                   )}
 
-                  {totalPackageAmount != 0 && (
+                  {totalPackageAmount !== 0 && (
                     <div className="d-flex justify-content-between text-primary">
                       <p className="">GST on Margin</p>
                       <p className="fw-semibold">
@@ -2206,7 +2271,7 @@ const CreateQuote = () => {
                     </div>
                   )}
 
-                  {totalPackageAmount != 0 && (
+                  {totalPackageAmount !== 0 && (
                     <div className="d-flex justify-content-between text-success">
                       <p className="">Final Margin Total</p>
                       <p className="fw-semibold">
@@ -2273,7 +2338,7 @@ const CreateQuote = () => {
               <tbody>
                 {installments.length > 0 ? (
                   installments.map((inst, index) => (
-                    <tr key={inst.id}>
+                    <tr key={index}>
                       <td>{inst.name}</td>
                       <td>{inst.percentage}%</td>
                       <td>

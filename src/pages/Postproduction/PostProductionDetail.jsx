@@ -1,353 +1,364 @@
-// import React, { useEffect, useState } from "react";
-// import axios from "axios";
-// import { useParams, useNavigate } from "react-router-dom";
-// import { Card, Table, Badge, Spinner, Alert } from "react-bootstrap";
-// import dayjs from "dayjs";
-
-// const PostProductionDetail = () => {
-//   const { id } = useParams();
-//   const [data, setData] = useState(null);
-//   const [quotation, setQuotation] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState("");
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         setLoading(true);
-//         setError("");
-
-//         // 1) collected-data details
-//         const detailsRes = await axios.get(
-//           `http://localhost:5000/api/collected-data/details/${id}`
-//         );
-
-//         if (detailsRes.data?.success && detailsRes.data?.data) {
-//           const details = detailsRes.data.data;
-//           setData(details);
-
-//           // 2) quotation
-//           if (details.quotationId) {
-//             const quotationRes = await axios.get(
-//               `http://localhost:5000/api/quotations/${details.quotationId}`
-//             );
-//             // API shape: { success: true, quotation: {...} }
-//             if (quotationRes.data?.quotation) {
-//               setQuotation(quotationRes.data.quotation);
-//             }
-//           }
-//         } else {
-//           setError(detailsRes.data?.message || "Failed to load data.");
-//         }
-//       } catch (err) {
-//         console.error("Error fetching data:", err);
-//         setError("Failed to load data. Please try again.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchData();
-//   }, [id]);
-
-//   // debug logs on state updates
-//   useEffect(() => {
-//     console.log("Data state updated:", data);
-//   }, [data]);
-
-//   useEffect(() => {
-//     console.log("Quotation state updated:", quotation);
-//   }, [quotation]);
-
-//   const handleRowClick = (event) => {
-//     if (!data) return;
-
-//     navigate(`/post-production/post-production-detail/assign-task`, {
-//       state: {
-//         id: data._id,
-//         eventId: event.eventId,
-//         eventName: event.eventName,
-//         totalPhotos: event.noOfPhotos,
-//         totalVideos: event.noOfVideos,
-//         quotationId: data.quotationId,
-//         editingStatus: event.editingStatus
-//       },
-//     });
-//   };
-
-//   // --- helpers (put near the top of your file) ---
-//   const fmt = (n) =>
-//     n == null ? "-" : `₹${Number(n).toLocaleString()}`;
-
-//   const asPlainObj = (maybeMap) => {
-//     if (!maybeMap) return {};
-//     if (maybeMap instanceof Map) return Object.fromEntries(maybeMap.entries());
-//     if (typeof maybeMap === "object") return maybeMap;
-//     return {};
-//   };
-
-//   const idToLabel = (sheetTypes = [], id) => {
-//     const hit = sheetTypes.find((s) => s.id === id);
-//     return hit?.label || id || "-";
-//   };
-
-//   // Build a concise “A: 2, B: 3 …” string from a qty map
-//   const qtySummary = (qtyObj, sheetTypes) => {
-//     const entries = Object.entries(qtyObj || {});
-//     if (!entries.length) return "—";
-//     return entries
-//       .map(([k, v]) => `${idToLabel(sheetTypes, k)}: ${v}`)
-//       .join(", ");
-//   };
-
-
-//   if (loading) {
-//     return (
-//       <div className="text-center py-4">
-//         <Spinner animation="border" role="status">
-//           <span className="visually-hidden">Loading...</span>
-//         </Spinner>
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="container py-4">
-//         <Alert variant="danger">{error}</Alert>
-//       </div>
-//     );
-//   }
-
-//   if (!data) {
-//     return <div className="text-center py-4">No data found</div>;
-//   }
-
-//   return (
-//     <div className="container py-4" style={{ fontSize: "13px" }}>
-//       {/* Collected Data Details */}
-//       <Card className="shadow-sm mb-4">
-//         <Card.Header className="fw-bold bg-dark text-white">
-//           Collected Data Details
-//         </Card.Header>
-//         <Card.Body>
-//           <div className="row mb-2">
-//             <div className="col-md-4">
-//               <strong>Quote ID:</strong> {data.quotationUniqueId}
-//             </div>
-//             <div className="col-md-4">
-//               <strong>Person Name:</strong> {data.personName}
-//             </div>
-//             <div className="col-md-4">
-//               <strong>System Number:</strong> {data.systemNumber}
-//             </div>
-//           </div>
-//           <div className="row">
-//             <div className="col-md-4">
-//               <strong>Total Photos:</strong> {data.totalPhotos}
-//             </div>
-//             <div className="col-md-4">
-//               <strong>Total Videos:</strong> {data.totalVideos}
-//             </div>
-//             <div className="col-md-4">
-//               <strong>Created At:</strong>{" "}
-//               {dayjs(data.createdAt).format("DD-MM-YYYY")}
-//             </div>
-//           </div>
-//         </Card.Body>
-//       </Card>
-
-//       {/* Albums (only if present in quotation) */}
-//       {quotation?.albums?.length ? (
-//         <Card className="shadow-sm mb-4">
-//           <Card.Header className="fw-bold bg-light">Albums</Card.Header>
-//           <Card.Body className="p-0">
-//             <Table bordered responsive hover className="mb-0" style={{ fontSize: "13px" }}>
-//               <thead className="table-light">
-//                 <tr>
-//                   <th>#</th>
-//                   <th>Template</th>
-//                   <th>Box</th>
-//                   <th>Qty</th>
-//                   <th>Album Unit Price</th>
-//                   <th>Box / Unit</th>
-//                   <th>Extras</th>
-//                   {/* <th>Final / Unit</th>
-//             <th>Final Total</th>
-//             <th>Base</th>
-//             <th>Saved</th> */}
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {quotation.albums.map((alb, idx) => {
-//                   const sheetTypes = alb?.snapshot?.sheetTypes || [];
-//                   const sharedObj = asPlainObj(alb?.extras?.shared);
-//                   const perUnitArr =
-//                     Array.isArray(alb?.extras?.perUnit) ? alb.extras.perUnit : [];
-//                   const finalPerUnit = Array.isArray(alb?.suggested?.finalPerUnit)
-//                     ? alb.suggested.finalPerUnit
-//                     : [];
-//                   const albumOnlyPerUnit = Array.isArray(alb?.suggested?.albumOnlyPerUnit)
-//                     ? alb.suggested.albumOnlyPerUnit
-//                     : [];
-
-//                   const hasPerUnit = !!alb?.customizePerUnit && perUnitArr.length;
-//                   const extrasCell = hasPerUnit ? (
-//                     <div className="small">
-//                       <div className="fw-semibold mb-1">Per-unit extras</div>
-//                       <Table bordered size="sm" className="mb-0">
-//                         <thead>
-//                           <tr>
-//                             <th style={{ whiteSpace: "nowrap" }}>Unit #</th>
-//                             {sheetTypes.map((t) => (
-//                               <th key={t.id}>{t.label}</th>
-//                             ))}
-//                           </tr>
-//                         </thead>
-//                         <tbody>
-//                           {perUnitArr.map((m, i) => {
-//                             const mObj = asPlainObj(m);
-//                             return (
-//                               <tr key={i}>
-//                                 <td className="text-center">{i + 1}</td>
-//                                 {sheetTypes.map((t) => (
-//                                   <td key={t.id} className="text-end">
-//                                     {mObj?.[t.id] ?? 0}
-//                                   </td>
-//                                 ))}
-//                               </tr>
-//                             );
-//                           })}
-//                         </tbody>
-//                       </Table>
-//                     </div>
-//                   ) : (
-//                     <div className="small">
-//                       <div className="fw-semibold">Shared extras</div>
-//                       <div>{qtySummary(sharedObj, sheetTypes)}</div>
-//                     </div>
-//                   );
-
-//                   return (
-//                     <tr key={alb._id || idx}>
-//                       <td>{String(idx + 1).padStart(2, "0")}</td>
-//                       <td>
-//                         <div className="fw-semibold">
-//                           {alb?.snapshot?.templateLabel || alb?.templateId || "-"}
-//                         </div>
-//                         <div className="text-muted small">
-//                           {alb?.snapshot?.baseSheets
-//                             ? `${alb.snapshot.baseSheets} sheets • ${alb.snapshot.basePhotos ?? "-"} photos`
-//                             : ""}
-//                         </div>
-//                       </td>
-//                       <td>{alb?.snapshot?.boxLabel || alb?.boxTypeId || "-"}</td>
-//                       <td className="text-center">{alb?.qty ?? 1}</td>
-//                       <td className="text-end">{fmt(alb?.unitPrice)}</td>
-//                       <td className="text-end">{fmt(alb?.suggested?.boxPerUnit)}</td>
-//                       <td style={{ width: "30%" }}>{extrasCell}</td>
-//                     </tr>
-//                   );
-//                 })}
-//               </tbody>
-//             </Table>
-//           </Card.Body>
-//         </Card>
-//       ) : null}
-
-
-//       {/* Event Details Table */}
-//       <Card className="shadow-sm">
-//         <Card.Header className="fw-bold bg-light">Event-wise Details</Card.Header>
-//         <Card.Body className="p-0">
-//           <Table
-//             bordered
-//             responsive
-//             hover
-//             className="mb-0"
-//             style={{ fontSize: "13px", cursor: "pointer" }}
-//           >
-//             <thead className="table-light">
-//               <tr>
-//                 <th>Sl.No</th>
-//                 <th>Event Name</th>
-//                 <th>Camera Name</th>
-//                 <th>Drive Size</th>
-//                 <th>Filled Size</th>
-//                 <th>Copying Person</th>
-//                 <th>Copied Location</th>
-//                 <th>Photos</th>
-//                 <th>Videos</th>
-//                 <th>Submission Date</th>
-//                 <th>Notes</th>
-//                 <th>Editing Status</th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {data.events.map((ev, idx) => (
-//                 <tr
-//                   key={ev._id || idx}
-//                   onClick={() => handleRowClick(ev)}
-//                   style={{ transition: "background-color 0.2s" }}
-//                   onMouseEnter={(e) =>
-//                     (e.currentTarget.style.backgroundColor = "#f8f9fa")
-//                   }
-//                   onMouseLeave={(e) =>
-//                     (e.currentTarget.style.backgroundColor = "")
-//                   }
-//                 >
-//                   <td>{String(idx + 1).padStart(2, "0")}</td>
-//                   <td>{ev.eventName}</td>
-//                   <td>{ev.cameraName}</td>
-//                   <td>{ev.totalDriveSize}</td>
-//                   <td>{ev.filledSize}</td>
-//                   <td>{ev.copyingPerson}</td>
-//                   <td>{ev.copiedLocation}</td>
-//                   <td className="text-center">{ev.noOfPhotos}</td>
-//                   <td className="text-center">{ev.noOfVideos}</td>
-//                   <td>{dayjs(ev.submissionDate).format("DD-MM-YYYY")}</td>
-//                   <td>{ev.notes}</td>
-//                   <td className="text-center">
-//                     <Badge
-//                       bg={
-//                         ev.editingStatus === "Completed"
-//                           ? "success"
-//                           : ev.editingStatus === "In Process"
-//                             ? "warning"
-//                             : "secondary"
-//                       }
-//                     >
-//                       {ev.editingStatus}
-//                     </Badge>
-//                   </td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </Table>
-//         </Card.Body>
-//       </Card>
-//     </div>
-//   );
-// };
-
-// export default PostProductionDetail;
-
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, Table, Badge, Spinner, Alert, Button } from "react-bootstrap"; // <-- Button added
+import {
+  Card,
+  Table,
+  Badge,
+  Spinner,
+  Alert,
+  Button,
+  Modal,
+  OverlayTrigger,
+  Tooltip,
+} from "react-bootstrap";
 import dayjs from "dayjs";
+import Select from "react-select";
+import { IoEye } from "react-icons/io5";
+import {
+  FaTasks,
+  FaWhatsapp,
+  FaCheckCircle,
+  FaUpload,
+  FaClipboardList,
+  FaStickyNote,
+  FaIdBadge,
+  FaUser,
+  FaCamera,
+  FaVideo,
+} from "react-icons/fa";
 
 const PostProductionDetail = () => {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [quotation, setQuotation] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [marking, setMarking] = useState(false); // <-- NEW
+  const [marking, setMarking] = useState(false);
   const [error, setError] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [assignedTasks, setAssignedTasks] = useState({});
+  const [selectedTask, setSelectedTask] = useState(null);
+  // Add a new state for submit modal loading
+  const [submitModalLoading, setSubmitModalLoading] = useState(false);
+
+  const [assignData, setAssignData] = useState({
+    eventName: "",
+    vendorId: "",
+    taskDescription: "",
+    completionDate: "",
+    photosCount: "",
+    videosCount: "",
+    taskType: "",
+  });
+
+  const [submitData, setSubmitData] = useState({
+    submittedPhotos: "",
+    submittedVideos: "",
+    submittedNotes: "",
+    submittedDate: "",
+  });
+
   const navigate = useNavigate();
+
+  // --- mark booking as completed ---
+  const handleMarkCompleted = async () => {
+    const quotationId = data?.quotationId;
+    if (!quotationId) return alert("Quotation identifier not available.");
+
+    if (!window.confirm("Mark this booking as Completed?")) return;
+
+    try {
+      setMarking(true);
+      const res = await axios.put(
+        `http://localhost:5000/api/quotations/${quotationId}/booking-status`,
+        { status: "Completed" }
+      );
+      if (res.data?.success) {
+        setQuotation((q) => ({ ...q, bookingStatus: "Completed" }));
+        alert("Booking marked as completed successfully!");
+      } else {
+        alert(res.data?.message || "Failed to update booking status.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert(
+        e?.response?.data?.message ||
+          e.message ||
+          "Failed to update booking status."
+      );
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  // Fetch assigned tasks for service units
+  const fetchAssignedTasks = async (serviceUnitIds) => {
+    try {
+      const tasks = {};
+      for (const unitId of serviceUnitIds) {
+        try {
+          const res = await axios.get(
+            `http://localhost:5000/api/task/service-unit/${unitId}`
+          );
+          if (res.data?.success && res.data.data) {
+            tasks[unitId] = res.data.data; // ✅ directly store the task object
+          }
+        } catch (err) {
+          console.log(`No task found for unit ${unitId}`);
+        }
+      }
+      setAssignedTasks(tasks);
+    } catch (err) {
+      console.error("Error fetching assigned tasks:", err);
+    }
+  };
+
+  const handleOpenAssignModal = async (unit) => {
+    try {
+      // Determine task type based on available photos and videos
+      const hasPhotos = unit.noOfPhotos > 0;
+      const hasVideos = unit.noOfVideos > 0;
+
+      let taskType = "";
+      if (hasPhotos && hasVideos) {
+        taskType = "Both";
+      } else if (hasPhotos) {
+        taskType = "PhotoSorting";
+      } else if (hasVideos) {
+        taskType = "VideoConversion";
+      }
+
+      setAssignData({
+        eventName: unit.packageName || "",
+        vendorId: "",
+        taskDescription: "",
+        completionDate: "",
+        photosCount: hasPhotos ? unit.noOfPhotos.toString() : "",
+        videosCount: hasVideos ? unit.noOfVideos.toString() : "",
+        taskType: taskType,
+      });
+
+      const category = "Inhouse Vendor";
+      const res = await axios.get(
+        `http://localhost:5000/api/vendors/category/${encodeURIComponent(
+          category
+        )}`
+      );
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setVendors(res.data.data);
+      } else {
+        setVendors([]);
+      }
+
+      setSelectedUnit(unit);
+      setShowAssignModal(true);
+    } catch (err) {
+      console.error("Error fetching vendors:", err);
+      alert("Failed to load vendors.");
+    }
+  };
+
+  // Handle input changes with validation
+  const handlePhotoCountChange = (value) => {
+    const maxPhotos = selectedUnit?.noOfPhotos || 0;
+    const numericValue = parseInt(value) || 0;
+
+    if (numericValue > maxPhotos) {
+      alert(
+        `Cannot assign more than ${maxPhotos} photos (available in collected data)`
+      );
+      setAssignData((prev) => ({
+        ...prev,
+        photosCount: maxPhotos.toString(),
+      }));
+    } else {
+      setAssignData((prev) => ({
+        ...prev,
+        photosCount: value,
+      }));
+    }
+  };
+
+  const handleVideoCountChange = (value) => {
+    const maxVideos = selectedUnit?.noOfVideos || 0;
+    const numericValue = parseInt(value) || 0;
+
+    if (numericValue > maxVideos) {
+      alert(
+        `Cannot assign more than ${maxVideos} videos (available in collected data)`
+      );
+      setAssignData((prev) => ({
+        ...prev,
+        videosCount: maxVideos.toString(),
+      }));
+    } else {
+      setAssignData((prev) => ({
+        ...prev,
+        videosCount: value,
+      }));
+    }
+  };
+
+  const handleAssignTask = async () => {
+    try {
+      if (!assignData.vendorId) {
+        alert("Please select a vendor");
+        return;
+      }
+
+      if (!assignData.taskType) {
+        alert("Please select a task type");
+        return;
+      }
+
+      const selectedVendor = vendors.find((v) => v._id === assignData.vendorId);
+
+      const taskData = {
+        quotationId: data.quotationId,
+        collectedDataId: data._id,
+        serviceUnitId: selectedUnit._id,
+        vendorId: assignData.vendorId,
+        vendorName: selectedVendor?.name || "Unknown Vendor",
+        taskType: assignData.taskType,
+        taskDescription: assignData.taskDescription,
+        noOfPhotos: parseInt(assignData.photosCount) || 0,
+        noOfVideos: parseInt(assignData.videosCount) || 0,
+        completionDate: assignData.completionDate,
+      };
+
+      // Validate that at least one count is provided
+      if (taskData.noOfPhotos === 0 && taskData.noOfVideos === 0) {
+        alert("Please specify the number of photos or videos to process");
+        return;
+      }
+
+      const res = await axios.post(
+        "http://localhost:5000/api/task/assign",
+        taskData
+      );
+
+      if (res.data?.success) {
+        // Update assigned tasks for this unit
+        setAssignedTasks((prev) => ({
+          ...prev,
+          [selectedUnit._id]: res.data.task,
+        }));
+
+        // Refresh the data to get updated sorting status
+        await refreshData();
+
+        setShowAssignModal(false);
+        alert("Task assigned successfully!");
+      } else {
+        alert(res.data?.message || "Failed to assign task");
+      }
+    } catch (err) {
+      console.error("Error assigning task:", err);
+      alert("Failed to assign task. Please try again.");
+    }
+  };
+
+  const handleSubmitTask = async () => {
+    try {
+      if (!selectedTask) {
+        alert("No task selected");
+        return;
+      }
+
+      const res = await axios.post(
+        `http://localhost:5000/api/task/${selectedTask._id}/submit`,
+        {
+          submittedPhotos: parseInt(submitData.submittedPhotos) || 0,
+          submittedVideos: parseInt(submitData.submittedVideos) || 0,
+          submittedNotes: submitData.submittedNotes,
+        }
+      );
+
+      if (res.data?.success) {
+        // Update the task in state
+        setAssignedTasks((prev) => ({
+          ...prev,
+          [selectedTask.serviceUnitId]: res.data.task,
+        }));
+
+        // Refresh the data to get updated sorting status
+        await refreshData();
+
+        setShowSubmitModal(false);
+        setSelectedTask(null);
+        alert("Task submitted successfully!");
+      } else {
+        alert(res.data?.message || "Failed to submit task");
+      }
+    } catch (err) {
+      console.error("Error submitting task:", err);
+      alert("Failed to submit task. Please try again.");
+    }
+  };
+
+  // Add this function to refresh data
+  const refreshData = async () => {
+    try {
+      const detailsRes = await axios.get(
+        `http://localhost:5000/api/collected-data/details/${id}`
+      );
+
+      if (detailsRes.data?.success && detailsRes.data?.data) {
+        const details = detailsRes.data.data;
+        setData(details);
+
+        // Fetch assigned tasks for all service units
+        const serviceUnitIds =
+          details.serviceUnits?.map((unit) => unit._id) || [];
+        await fetchAssignedTasks(serviceUnitIds);
+      }
+    } catch (err) {
+      console.error("Error refreshing data:", err);
+    }
+  };
+
+  // FIXED: Simplified handleOpenSubmitModal
+  const handleOpenSubmitModal = (unit) => {
+    console.log("Opening submit modal for unit:", unit._id);
+
+    const task = assignedTasks[unit._id];
+    console.log("Task found:", task);
+
+    if (task) {
+      setSelectedTask(task);
+      setSubmitData({
+        submittedPhotos: task.noOfPhotos?.toString() || "0",
+        submittedVideos: task.noOfVideos?.toString() || "0",
+        submittedNotes: task.submittedNotes || "",
+      });
+      setShowSubmitModal(true);
+      console.log("Submit modal state set to true");
+    } else {
+      console.log("No task found in assignedTasks");
+      alert("Task data not loaded. Please try refreshing the page.");
+    }
+  };
+
+  const handleViewSubmittedTask = (unit) => {
+    const task = assignedTasks[unit._id];
+    if (task) {
+      setSelectedTask(task);
+      setShowViewModal(true);
+    } else {
+      alert("No task details available.");
+    }
+  };
+
+  const vendorOptions = vendors.map((v) => ({
+    value: v._id,
+    label: `${v.name}`,
+  }));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -362,6 +373,11 @@ const PostProductionDetail = () => {
         if (detailsRes.data?.success && detailsRes.data?.data) {
           const details = detailsRes.data.data;
           setData(details);
+
+          // Fetch assigned tasks for all service units
+          const serviceUnitIds =
+            details.serviceUnits?.map((unit) => unit._id) || [];
+          await fetchAssignedTasks(serviceUnitIds);
 
           if (details.quotationId) {
             const quotationRes = await axios.get(
@@ -385,31 +401,17 @@ const PostProductionDetail = () => {
     fetchData();
   }, [id]);
 
+  const handleOpenModal = (unit) => {
+    setSelectedUnit(unit);
+    setShowModal(true);
+  };
 
-  // const handleRowClick = (unit) => {
-  //   if (!data) return;
-  //   navigate(`/post-production/post-production-detail/assign-task`, {
-  //     state: {
-  //       id: unit._id,
-  //       // Backward-compat keys expected by downstream screens
-  //       eventId: unit.packageId,
-  //       eventName: unit.packageName,
-  //       totalPhotos: unit.noOfPhotos,
-  //       totalVideos: unit.noOfVideos,
-  //       quotationId: data.quotationId,
-  //       editingStatus: unit.editingStatus,
-  //       // Service-unit specific context
-  //       packageId: unit.packageId,
-  //       packageName: unit.packageName,
-  //       serviceId: unit.serviceId,
-  //       serviceName: unit.serviceName,
-  //       unitIndex: unit.unitIndex,
-  //     },
-  //   });
-  // };
+  const handleCloseModal = () => {
+    setSelectedUnit(null);
+    setShowModal(false);
+  };
 
   const handleRowClick = (unit) => {
-    // if (!data) return;
     navigate(`/post-production/post-production-detail/assign-task`, {
       state: {
         collectedDataId: data._id,
@@ -418,8 +420,7 @@ const PostProductionDetail = () => {
     });
   };
 
-
-  // --- helpers ---
+  // Helper functions
   const fmt = (n) => (n == null ? "-" : `₹${Number(n).toLocaleString()}`);
   const asPlainObj = (maybeMap) => {
     if (!maybeMap) return {};
@@ -434,38 +435,116 @@ const PostProductionDetail = () => {
   const qtySummary = (qtyObj, sheetTypes) => {
     const entries = Object.entries(qtyObj || {});
     if (!entries.length) return "—";
-    return entries.map(([k, v]) => `${idToLabel(sheetTypes, k)}: ${v}`).join(", ");
+    return entries
+      .map(([k, v]) => `${idToLabel(sheetTypes, k)}: ${v}`)
+      .join(", ");
   };
 
-  // --- NEW: mark booking as completed ---
-  const handleMarkCompleted = async () => {
-    const id = data.quotationId
-    console.log("id", id)
+  // Get task for a service unit
+  const getTaskForUnit = (unitId) => {
+    return assignedTasks[unitId] || null;
+  };
 
-    if (!id) return alert("Quotation identifier not available.");
+  // Render action buttons based on sortingStatus
+  const renderActionButtons = (unit) => {
+    const sortingStatus = unit.sortingStatus || "Pending";
+    const task = getTaskForUnit(unit._id);
 
-    console.log("identifier", id)
-
-    if (!window.confirm("Mark this booking as Completed?")) return;
-
-    try {
-      setMarking(true);
-      // Endpoint below in the backend section
-      const res = await axios.put(
-        `http://localhost:5000/api/quotations/${id}/booking-status`,
-        { status: "Completed" }
+    if (sortingStatus === "Pending") {
+      return (
+        <OverlayTrigger
+          placement="top"
+          overlay={<Tooltip>Assign Task</Tooltip>}
+        >
+          <Button
+            variant="outline-primary"
+            size="sm"
+            className="py-1 px-2" // tighter padding
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenAssignModal(unit);
+            }}
+          >
+            <FaTasks size={14} /> {/* smaller icon */}
+          </Button>
+        </OverlayTrigger>
       );
-      if (res.data?.success) {
-        setQuotation((q) => ({ ...q, bookingStatus: "Completed" }));
-      } else {
-        alert(res.data?.message || "Failed to update booking status.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert(e?.response?.data?.message || e.message || "Failed to update booking status.");
-    } finally {
-      setMarking(false);
     }
+
+    if (sortingStatus === "Assigned") {
+      return (
+        <>
+          <OverlayTrigger
+            placement="top"
+            overlay={<Tooltip>Submit Task</Tooltip>}
+          >
+            <Button
+              variant="outline-warning"
+              size="sm"
+              className="py-1 px-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenSubmitModal(unit);
+              }}
+            >
+              <FaUpload size={14} />
+            </Button>
+          </OverlayTrigger>
+
+          <OverlayTrigger
+            placement="top"
+            overlay={<Tooltip>View Task Details</Tooltip>}
+          >
+            <Button
+              variant="outline-info"
+              size="sm"
+              className="py-1 px-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewSubmittedTask(unit);
+              }}
+            >
+              <FaClipboardList size={14} />
+            </Button>
+          </OverlayTrigger>
+        </>
+      );
+    }
+
+    if (sortingStatus === "Completed") {
+      return (
+        <OverlayTrigger
+          placement="top"
+          overlay={<Tooltip>View Task Details</Tooltip>}
+        >
+          <Button
+            variant="outline-info"
+            size="sm"
+            className="py-1 px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewSubmittedTask(unit);
+            }}
+          >
+            <FaClipboardList size={14} />
+          </Button>
+        </OverlayTrigger>
+      );
+    }
+
+    return null;
+  };
+
+  // Helper to determine available media types for a unit
+  const getAvailableMediaTypes = (unit) => {
+    const hasPhotos = unit.noOfPhotos > 0;
+    const hasVideos = unit.noOfVideos > 0;
+
+    return {
+      hasPhotos,
+      hasVideos,
+      hasBoth: hasPhotos && hasVideos,
+    };
   };
 
   if (loading) {
@@ -493,73 +572,159 @@ const PostProductionDetail = () => {
   return (
     <div className="container py-4" style={{ fontSize: "13px" }}>
       {/* Collected Data Details */}
-      <Card className="shadow-sm mb-4">
-        <Card.Header className="d-flex justify-content-between align-items-center fw-bold bg-dark text-white">
+      <Card className="shadow-sm mb-4 border-0">
+        <Card.Header className="fw-bold bg-dark text-white d-flex justify-content-between align-items-center">
           <span>Collected Data Details</span>
-
-          {/* --- NEW: Mark as Completed button --- */}
-          <div className="d-flex align-items-center gap-2">
-            <span className="badge bg-secondary p-2" style={{fontSize:"14px"}}>
-              Status: {quotation?.bookingStatus || "—"}
-            </span>
-            <Button
-              size="sm"
-              variant="success"
-              onClick={handleMarkCompleted}
-              disabled={marking || (quotation?.bookingStatus === "Completed")}
-            >
-              {marking ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Updating…
-                </>
-              ) : (
-                "Mark as Completed"
-              )}
-            </Button>
-          </div>
+          <Badge
+            bg={
+              quotation?.bookingStatus === "Completed"
+                ? "success"
+                : quotation?.bookingStatus === "Booked"
+                ? "primary"
+                : "warning"
+            }
+            className="px-3 py-2"
+          >
+            Status: {quotation?.bookingStatus || "—"}
+          </Badge>
         </Card.Header>
 
         <Card.Body>
-          <div className="row mb-2">
-            <div className="col-md-4">
-              <strong>Quote ID:</strong> {data.quotationUniqueId}
+          <div className="row gy-3">
+            {/* Quote ID */}
+            <div className="col-md-3">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex align-items-center">
+                <FaIdBadge className="me-3 text-primary" size={24} />
+                <div>
+                  <small className="text-muted">Quote ID</small>
+                  <h6 className="mb-0 fw-bold">{data.quotationUniqueId}</h6>
+                </div>
+              </div>
             </div>
-            <div className="col-md-4">
-              <strong>Person Name:</strong> {data.personName}
+
+            {/* Person Name */}
+            <div className="col-md-3">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex align-items-center">
+                <FaUser className="me-3 text-success" size={24} />
+                <div>
+                  <small className="text-muted">Person / Couples</small>
+                  <h6 className="mb-0 fw-bold">{data.personName}</h6>
+                </div>
+              </div>
             </div>
-            <div className="col-md-4">
-              <strong>System Number:</strong> {data.systemNumber}
+
+            {/* Total Photos */}
+            <div className="col-md-3">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex align-items-center">
+                <FaCamera className="me-3 text-info" size={24} />
+                <div>
+                  <small className="text-muted">Total Photos</small>
+                  <h6 className="mb-0 fw-bold">{data.totalPhotos}</h6>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="row">
-            <div className="col-md-4">
-              <strong>Total Photos:</strong> {data.totalPhotos}
+
+            {/* Total Videos */}
+            <div className="col-md-3">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex align-items-center">
+                <FaVideo className="me-3 text-warning" size={24} />
+                <div>
+                  <small className="text-muted">Total Videos</small>
+                  <h6 className="mb-0 fw-bold">{data.totalVideos}</h6>
+                </div>
+              </div>
             </div>
-            <div className="col-md-4">
-              <strong>Total Videos:</strong> {data.totalVideos}
+
+            {/* Quote Note */}
+            <div className="col-md-6">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex align-items-start">
+                <FaStickyNote className="me-3 text-secondary mt-1" size={20} />
+                <div>
+                  <small className="text-muted">Quote Note</small>
+                  <p className="mb-0">{quotation?.quoteNote || "—"}</p>
+                </div>
+              </div>
             </div>
-            <div className="col-md-4">
-              <strong>Created At:</strong>{" "}
-              {dayjs(data.createdAt).format("DD-MM-YYYY")}
+
+            {/* WhatsApp Group */}
+            <div className="col-md-6">
+              <div className="p-3 rounded shadow-sm bg-white h-100 border d-flex justify-content-between align-items-center">
+                <div>
+                  <small className="text-muted">WhatsApp Group</small>
+                  <h6 className="mb-0 fw-bold">
+                    {quotation?.whatsappGroupName || "—"}
+                  </h6>
+                </div>
+                {quotation?.whatsappGroupName && (
+                  <div className="bg-success text-white d-flex align-items-center px-3 py-2 rounded-pill shadow-sm">
+                    <FaWhatsapp className="me-2" /> WhatsApp
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Card.Body>
       </Card>
+
+      {/* Quotation Details */}
+      {quotation ? (
+        <Card className="shadow-sm mb-4">
+          <Card.Header className="fw-bold bg-light">
+            Quotation Details
+          </Card.Header>
+          <Card.Body>
+            {quotation.packages?.length ? (
+              <Table bordered responsive hover style={{ fontSize: "13px" }}>
+                <thead className="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Category</th>
+                    <th>Event Start</th>
+                    <th>Event End</th>
+                    <th>Slot</th>
+                    <th>Venue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotation.packages.map((pkg, idx) => (
+                    <tr key={pkg._id || idx}>
+                      <td>{String(idx + 1).padStart(2, "0")}</td>
+                      <td className="w-25">{pkg.categoryName}</td>
+                      <td>
+                        {pkg.eventStartDate
+                          ? dayjs(pkg.eventStartDate).format("DD-MM-YYYY")
+                          : "-"}
+                      </td>
+                      <td>
+                        {pkg.eventEndDate
+                          ? dayjs(pkg.eventEndDate).format("DD-MM-YYYY")
+                          : "-"}
+                      </td>
+                      <td>{pkg.slot}</td>
+                      <td>{pkg.venueName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <div className="text-muted small">No packages found</div>
+            )}
+          </Card.Body>
+        </Card>
+      ) : null}
 
       {/* Albums (only if present in quotation) */}
       {quotation?.albums?.length ? (
         <Card className="shadow-sm mb-4">
           <Card.Header className="fw-bold bg-light">Albums</Card.Header>
           <Card.Body className="p-0">
-            <Table bordered responsive hover className="mb-0" style={{ fontSize: "13px" }}>
+            <Table
+              bordered
+              responsive
+              hover
+              className="mb-0"
+              style={{ fontSize: "13px" }}
+            >
               <thead className="table-light">
                 <tr>
                   <th>#</th>
@@ -569,14 +734,18 @@ const PostProductionDetail = () => {
                   <th>Album Unit Price</th>
                   <th>Box / Unit</th>
                   <th>Extras</th>
+                
                 </tr>
               </thead>
               <tbody>
                 {quotation.albums.map((alb, idx) => {
                   const sheetTypes = alb?.snapshot?.sheetTypes || [];
                   const sharedObj = asPlainObj(alb?.extras?.shared);
-                  const perUnitArr = Array.isArray(alb?.extras?.perUnit) ? alb.extras.perUnit : [];
-                  const hasPerUnit = !!alb?.customizePerUnit && perUnitArr.length;
+                  const perUnitArr = Array.isArray(alb?.extras?.perUnit)
+                    ? alb.extras.perUnit
+                    : [];
+                  const hasPerUnit =
+                    !!alb?.customizePerUnit && perUnitArr.length;
 
                   const extrasCell = hasPerUnit ? (
                     <div className="small">
@@ -619,19 +788,28 @@ const PostProductionDetail = () => {
                       <td>{String(idx + 1).padStart(2, "0")}</td>
                       <td>
                         <div className="fw-semibold">
-                          {alb?.snapshot?.templateLabel || alb?.templateId || "-"}
+                          {alb?.snapshot?.templateLabel ||
+                            alb?.templateId ||
+                            "-"}
                         </div>
                         <div className="text-muted small">
                           {alb?.snapshot?.baseSheets
-                            ? `${alb.snapshot.baseSheets} sheets • ${alb.snapshot.basePhotos ?? "-"} photos`
+                            ? `${alb.snapshot.baseSheets} sheets • ${
+                                alb.snapshot.basePhotos ?? "-"
+                              } photos`
                             : ""}
                         </div>
                       </td>
-                      <td>{alb?.snapshot?.boxLabel || alb?.boxTypeId || "-"}</td>
+                      <td>
+                        {alb?.snapshot?.boxLabel || alb?.boxTypeId || "-"}
+                      </td>
                       <td className="text-center">{alb?.qty ?? 1}</td>
                       <td className="text-end">{fmt(alb?.unitPrice)}</td>
-                      <td className="text-end">{fmt(alb?.suggested?.boxPerUnit)}</td>
+                      <td className="text-end">
+                        {fmt(alb?.suggested?.boxPerUnit)}
+                      </td>
                       <td style={{ width: "30%" }}>{extrasCell}</td>
+                    
                     </tr>
                   );
                 })}
@@ -640,10 +818,11 @@ const PostProductionDetail = () => {
           </Card.Body>
         </Card>
       ) : null}
-
       {/* Service Unit Details Table */}
       <Card className="shadow-sm">
-        <Card.Header className="fw-bold bg-light">Service Unit Details</Card.Header>
+        <Card.Header className="fw-bold bg-light">
+          Service Unit Details
+        </Card.Header>
         <Card.Body className="p-0">
           <Table
             bordered
@@ -658,68 +837,584 @@ const PostProductionDetail = () => {
                 <th>Event</th>
                 <th>Service</th>
                 <th>Unit</th>
-                <th>Camera Name</th>
-                <th>Drive Size</th>
-                <th>Filled Size</th>
-                <th>Copying Person</th>
-                <th>Copied Location</th>
+                <th>Sys No.</th>
                 <th>Photos</th>
                 <th>Videos</th>
                 <th>Submission Date</th>
                 <th>Notes</th>
-                <th>Editing Status</th>
+                <th>Backup Drive</th>
+                {/* <th>Editing Status</th> */}
+                <th>Sorting Status</th> {/* ✅ NEW COLUMN */}
+                {/* <th>Task Status</th> */}
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {(data.serviceUnits || []).map((u, idx) => (
-                <tr
-                  key={u._id || idx}
-                  onClick={() => handleRowClick(u)}
-                  style={{ transition: "background-color 0.2s" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f8f9fa")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "")
-                  }
-                >
-                  <td>{String(idx + 1).padStart(2, "0")}</td>
-                  <td>{u.packageName}</td>
-                  <td>{u.serviceName}</td>
-                  <td className="text-center">{typeof u.unitIndex === 'number' ? u.unitIndex + 1 : '-'}</td>
-                  <td>{u.cameraName}</td>
-                  <td>{u.totalDriveSize}</td>
-                  <td>{u.filledSize}</td>
-                  <td>{u.copyingPerson}</td>
-                  <td>{u.copiedLocation}</td>
-                  <td className="text-center">{u.noOfPhotos}</td>
-                  <td className="text-center">{u.noOfVideos}</td>
-                  <td>{u.submissionDate ? dayjs(u.submissionDate).format("DD-MM-YYYY") : '-'}</td>
-                  <td>{u.notes}</td>
-                  <td className="text-center">
-                    <Badge
-                      bg={
-                        u.editingStatus === "Completed"
-                          ? "success"
-                          : u.editingStatus === "In Process"
+              {(data.serviceUnits || []).map((u, idx) => {
+                const task = getTaskForUnit(u._id);
+                const mediaTypes = getAvailableMediaTypes(u);
+
+                return (
+                  <tr
+                    key={u._id || idx}
+                    // onClick={() => handleRowClick(u)}
+                    style={{ transition: "background-color 0.2s" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#f8f9fa")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "")
+                    }
+                  >
+                    <td>{String(idx + 1).padStart(2, "0")}</td>
+                    <td>{u.packageName}</td>
+                    <td>{u.serviceName}</td>
+                    <td className="text-center">
+                      {typeof u.unitIndex === "number" ? u.unitIndex + 1 : "-"}
+                    </td>
+                    <td>{data.systemNumber}</td>
+                    <td className="text-center">{u.noOfPhotos}</td>
+                    <td className="text-center">{u.noOfVideos}</td>
+                    <td>
+                      {u.submissionDate
+                        ? dayjs(u.submissionDate).format("DD-MM-YYYY")
+                        : "-"}
+                    </td>
+                    <td>{u.notes}</td>
+                    <td>{u.backupDrive ? u.backupDrive : "Pending"}</td>
+
+                    {/* ✅ NEW: Sorting Status Column */}
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          u.sortingStatus === "Completed"
+                            ? "success"
+                            : u.sortingStatus === "Assigned"
                             ? "warning"
                             : "secondary"
-                      }
-                    >
-                      {u.editingStatus}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
+                        }
+                      >
+                        {u.sortingStatus || "Pending"}
+                      </Badge>
+                    </td>
+                   
+                    <td>
+                      <div className="d-flex gap-2">
+                        {/* Eye Button */}
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip>View Details</Tooltip>}
+                        >
+                          <Button
+                            variant="outline-dark"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenModal(u);
+                            }}
+                          >
+                            <IoEye size={16} />
+                          </Button>
+                        </OverlayTrigger>
+
+                        {/* Dynamic Action Button */}
+                        {renderActionButtons(u)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         </Card.Body>
       </Card>
+
+      {/* Modal for full collected data details */}
+      <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5">Collected Data Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedUnit ? (
+            <div>
+              <div className="row">
+                <div className="col-md-6">
+                  <strong>Package:</strong> {selectedUnit.packageName}
+                </div>
+                <div className="col-md-6">
+                  <strong>Service:</strong> {selectedUnit.serviceName}
+                </div>
+              </div>
+              <div className="mb-3"></div>
+              <div className="row">
+                <div className="col-md-6">
+                  <p>
+                    <strong>Camera:</strong> {selectedUnit.cameraName}
+                  </p>
+                  <p>
+                    <strong>System Number:</strong> {data.systemNumber}
+                  </p>
+                  <p>
+                    <strong>Backup System:</strong> {data.backupSystemNumber}
+                  </p>
+                  <p>
+                    <strong>Drive Size:</strong> {selectedUnit.totalDriveSize}
+                  </p>
+                  <p>
+                    <strong>Filled Size:</strong> {selectedUnit.filledSize}
+                  </p>
+                  <p>
+                    <strong>Copied Location:</strong>{" "}
+                    {selectedUnit.copiedLocation}
+                  </p>
+                  <p>
+                    <strong>Backup Copied Location:</strong>{" "}
+                    {selectedUnit.backupCopiedLocation}
+                  </p>
+                  <p>
+                    <strong>Backup Drive: </strong>{" "}
+                    {selectedUnit.backupDrive || "N/A"}
+                  </p>
+                  {selectedUnit.backupDrive && (
+                    <p>
+                      <strong>Backup Drive Name: </strong>{" "}
+                      {selectedUnit.driveName}
+                    </p>
+                  )}
+                </div>
+                <div className="col-md-6">
+                  <p>
+                    <strong>No. of Photos:</strong>{" "}
+                    {selectedUnit.noOfPhotos ?? "-"}
+                  </p>
+                  <p>
+                    <strong>No. of Videos:</strong>{" "}
+                    {selectedUnit.noOfVideos ?? "-"}
+                  </p>
+                  <p>
+                    <strong>First Photo Time:</strong>{" "}
+                    {selectedUnit.firstPhotoTime || "-"}
+                  </p>
+                  <p>
+                    <strong>Last Photo Time:</strong>{" "}
+                    {selectedUnit.lastPhotoTime || "-"}
+                  </p>
+                  <p>
+                    <strong>First Video Time:</strong>{" "}
+                    {selectedUnit.firstVideoTime || "-"}
+                  </p>
+                  <p>
+                    <strong>Last Video Time:</strong>{" "}
+                    {selectedUnit.lastVideoTime || "-"}
+                  </p>
+                  <p>
+                    <strong>Submission Date:</strong>{" "}
+                    {selectedUnit.submissionDate
+                      ? dayjs(selectedUnit.submissionDate).format("DD-MM-YYYY")
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Notes:</strong> {selectedUnit.notes || "-"}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Badge bg="success">
+                  Sorting Status: {selectedUnit.sortingStatus}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <p>No details available.</p>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* Assign Task Modal */}
+      <Modal
+        show={showAssignModal}
+        onHide={() => setShowAssignModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Assign Task</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-3">
+            <label className="form-label">Event Name</label>
+            <input
+              type="text"
+              className="form-control"
+              value={assignData.eventName}
+              disabled
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Select Vendor</label>
+            <Select
+              options={vendorOptions}
+              value={
+                vendorOptions.find(
+                  (opt) => opt.value === assignData.vendorId
+                ) || null
+              }
+              onChange={(selected) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  vendorId: selected?.value || "",
+                }))
+              }
+              placeholder="Select Vendor"
+              isClearable
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Task Type</label>
+            <select
+              className="form-control"
+              value={assignData.taskType}
+              onChange={(e) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  taskType: e.target.value,
+                }))
+              }
+            >
+              <option value="">Select Task Type</option>
+              {selectedUnit?.noOfPhotos > 0 && (
+                <option value="PhotoSorting">Photo Sorting</option>
+              )}
+              {selectedUnit?.noOfVideos > 0 && (
+                <option value="VideoConversion">Video Conversion</option>
+              )}
+              {selectedUnit?.noOfPhotos > 0 && selectedUnit?.noOfVideos > 0 && (
+                <option value="Both">
+                  Both Photo Sorting & Video Conversion
+                </option>
+              )}
+            </select>
+          </div>
+
+          {/* Dynamic Fields based on available media and selected task type */}
+          {(assignData.taskType === "PhotoSorting" ||
+            assignData.taskType === "Both") &&
+            selectedUnit?.noOfPhotos > 0 && (
+              <div className="mb-3">
+                <label className="form-label">
+                  No. of Photos to sort
+                  <small className="text-muted ms-2">
+                    (Max: {selectedUnit?.noOfPhotos} available)
+                  </small>
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={assignData.photosCount}
+                  onChange={(e) => handlePhotoCountChange(e.target.value)}
+                  min="0"
+                  max={selectedUnit?.noOfPhotos}
+                  placeholder={`Enter photos to sort (max ${selectedUnit?.noOfPhotos})`}
+                />
+              </div>
+            )}
+
+          {(assignData.taskType === "VideoConversion" ||
+            assignData.taskType === "Both") &&
+            selectedUnit?.noOfVideos > 0 && (
+              <div className="mb-3">
+                <label className="form-label">
+                  No. of Videos to convert
+                  <small className="text-muted ms-2">
+                    (Max: {selectedUnit?.noOfVideos} available)
+                  </small>
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={assignData.videosCount}
+                  onChange={(e) => handleVideoCountChange(e.target.value)}
+                  min="0"
+                  max={selectedUnit?.noOfVideos}
+                  placeholder={`Enter videos to convert (max ${selectedUnit?.noOfVideos})`}
+                />
+              </div>
+            )}
+
+          <div className="mb-3">
+            <label className="form-label">Task Description</label>
+            <textarea
+              className="form-control"
+              rows="2"
+              value={assignData.taskDescription}
+              onChange={(e) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  taskDescription: e.target.value,
+                }))
+              }
+              placeholder="Describe the task requirements..."
+            ></textarea>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Completion Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={assignData.completionDate}
+              onChange={(e) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  completionDate: e.target.value,
+                }))
+              }
+            />
+          </div>
+
+          {/* Available Media Summary */}
+          {selectedUnit && (
+            <div className="alert alert-info p-2">
+              <small>
+                <strong>Available Media:</strong> {selectedUnit.noOfPhotos}{" "}
+                photos, {selectedUnit.noOfVideos} videos
+              </small>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowAssignModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleAssignTask}>
+            Assign Task
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Submit Task Modal */}
+      <Modal
+        show={showSubmitModal}
+        onHide={() => setShowSubmitModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Submit Task</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {submitModalLoading ? (
+            <div className="text-center py-4">
+              <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading task details...</span>
+              </Spinner>
+              <div className="mt-2">Loading task details...</div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3">
+                <label className="form-label">Submitted Photos Count</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={submitData.submittedPhotos}
+                  onChange={(e) =>
+                    setSubmitData((prev) => ({
+                      ...prev,
+                      submittedPhotos: e.target.value,
+                    }))
+                  }
+                  disabled
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Submitted Videos Count</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={submitData.submittedVideos}
+                  onChange={(e) =>
+                    setSubmitData((prev) => ({
+                      ...prev,
+                      submittedVideos: e.target.value,
+                    }))
+                  }
+                  disabled
+                />
+              </div>
+              {/* <div className="mb-3">
+                <label className="form-label">Submitted Photos Count</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={submitData.submittedPhotos}
+                  onChange={(e) =>
+                    setSubmitData((prev) => ({
+                      ...prev,
+                      submittedPhotos: e.target.value,
+                    }))
+                  }
+                  disabled
+                />
+              </div> */}
+
+              <div className="mb-3">
+                <label className="form-label">Submission Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  rows="3"
+                  value={submitData.submittedDate}
+                  onChange={(e) =>
+                    setSubmitData((prev) => ({
+                      ...prev,
+                      submittedDate: e.target.value,
+                    }))
+                  }
+                  // placeholder="Any notes about the submitted work..."
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Submission Notes</label>
+                <textarea
+                  className="form-control"
+                  rows="3"
+                  value={submitData.submittedNotes}
+                  onChange={(e) =>
+                    setSubmitData((prev) => ({
+                      ...prev,
+                      submittedNotes: e.target.value,
+                    }))
+                  }
+                  placeholder="Any notes about the submitted work..."
+                ></textarea>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleSubmitTask}>
+            Submit Task
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* View Task Details Modal */}
+      <Modal
+        show={showViewModal}
+        onHide={() => setShowViewModal(false)}
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Task Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedTask ? (
+            <div>
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <strong>Vendor:</strong> {selectedTask.vendorName}
+                </div>
+                <div className="col-md-6">
+                  <strong>Task Type:</strong> {selectedTask.taskType}
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <strong>Assigned Date:</strong>{" "}
+                  {dayjs(selectedTask.assignedDate).format("DD-MM-YYYY")}
+                </div>
+                <div className="col-md-6">
+                  <strong>Completion Date:</strong>{" "}
+                  {selectedTask.completionDate
+                    ? dayjs(selectedTask.completionDate).format("DD-MM-YYYY")
+                    : "-"}
+                </div>
+              </div>
+
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <strong>Assigned Photos:</strong> {selectedTask.noOfPhotos}
+                </div>
+                <div className="col-md-6">
+                  <strong>Assigned Videos:</strong> {selectedTask.noOfVideos}
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <strong>Task Description:</strong>
+                <p>
+                  {selectedTask.taskDescription || "No description provided"}
+                </p>
+              </div>
+
+              {selectedTask.status === "Completed" ? (
+                <>
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <strong>Submitted Photos:</strong>{" "}
+                      {selectedTask.submittedPhotos}
+                    </div>
+                    <div className="col-md-6">
+                      <strong>Submitted Videos:</strong>{" "}
+                      {selectedTask.submittedVideos}
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <strong>Submission Notes:</strong>
+                    <p>{selectedTask.submittedNotes || "No notes provided"}</p>
+                  </div>
+
+                  <div className="mb-3">
+                    <strong>Submitted Date:</strong>{" "}
+                    {selectedTask.submittedDate
+                      ? dayjs(selectedTask.submittedDate).format(
+                          "DD-MM-YYYY HH:mm"
+                        )
+                      : "-"}
+                  </div>
+                </>
+              ) : (
+                <div className="alert alert-info">
+                  <small>
+                    This task is currently <strong>Assigned</strong> but not yet
+                    submitted.
+                  </small>
+                </div>
+              )}
+
+              <div className="mb-3">
+                <strong>Status:</strong>{" "}
+                <Badge
+                  bg={
+                    selectedTask.status === "Completed" ? "success" : "warning"
+                  }
+                >
+                  {selectedTask.status}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <p>No task details available.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowViewModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
 export default PostProductionDetail;
-
-
-

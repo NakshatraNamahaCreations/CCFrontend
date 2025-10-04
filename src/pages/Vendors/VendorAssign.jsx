@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from "react";
 // import { Card, Button, Table, Tooltip, OverlayTrigger } from "react-bootstrap";
 // import { FaExchangeAlt } from "react-icons/fa";
@@ -17,8 +18,16 @@
 //   const [loading, setLoading] = useState(true);
 
 //   // assistant options cache per serviceName
-//   const [assistantOptionsMap, setAssistantOptionsMap] = useState({}); // { [serviceName]: [{id,name}] }
-//   const [assistantLoadingMap, setAssistantLoadingMap] = useState({}); // { [serviceName]: boolean }
+//   const [assistantOptionsMap, setAssistantOptionsMap] = useState({});
+//   const [assistantLoadingMap, setAssistantLoadingMap] = useState({});
+
+
+//   // Normalize service name (remove "Comp" or "Complementary")
+//   const normalizeServiceName = (name = "") =>
+//     name
+//       .replace(/^Comp\s+/i, "")
+//       .replace(/^Complementary\s+/i, "")
+//       .trim();
 
 //   // fetch quotation once
 //   useEffect(() => {
@@ -49,7 +58,7 @@
 //     fetchQuotation();
 //   }, [quotationId, packageId]);
 
-//   // Derived data (NO hooks below -> avoids hook-order issues)
+//   // Derived data
 //   const pkg = quotation?.packages?.[0];
 //   const services = pkg?.services ?? [];
 //   const rows = services.flatMap((s) =>
@@ -63,7 +72,7 @@
 //   const isCandidService = (name = "") =>
 //     name === "Candid Photographer" || name === "Candid Cinematographer";
 
-//   // Prefetch assistant options for candid services in this package (using SAME endpoint as AvailableVendors)
+//   // Prefetch assistant options for candid services
 //   useEffect(() => {
 //     if (!pkg) return;
 
@@ -82,10 +91,15 @@
 //       setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
 //       try {
 //         const res = await axios.get(
-//           `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(serviceName)}?date=${pkg.eventStartDate}`
+//           `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+//             serviceName
+//           )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
 //         );
-//         const list = res.data?.vendors ?? res.data?.data ?? [];
-//         const opts = list.map((v) => ({ id: v._id || v.id, name: v.name }));
+
+//         // ✅ FIX: use availableVendors array
+//         const list = res.data?.data?.availableVendors ?? [];
+//         const opts = list.map((v) => ({ id: v._id, name: v.name }));
+
 //         setAssistantOptionsMap((m) => ({ ...m, [serviceName]: opts }));
 //       } catch (err) {
 //         console.error("Fetch assistants via vendor endpoint error:", err);
@@ -99,8 +113,10 @@
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, [pkg]);
 
-//   const handleCheckVendor = (serviceId, unitIndex, serviceName, pkg) => {
-//     navigate(`/vendors/available-vendors/${serviceName}`, {
+//   const handleCheckVendor = (serviceId, unitIndex, serviceName) => {
+//     const normalized = normalizeServiceName(serviceName);
+
+//     navigate(`/vendors/available-vendors/${encodeURIComponent(normalized)}`, {
 //       state: {
 //         quotationId,
 //         packageId,
@@ -108,28 +124,28 @@
 //         unitIndex,
 //         slot: quotation?.packages[0]?.slot,
 //         eventStartDate: quotation?.packages[0]?.eventStartDate,
+//         eventEndDate: quotation?.packages[0]?.eventEndDate,
 //         returnPath: `/vendors/vendor-assign/${quotationId}/${packageId}`,
 //         isReassign: true,
 //       },
 //     });
 //   };
 
-//   // NEW: react-select handler (selectedOption is {value,label} or null)
+
+//   // Assistant assign handler
+//   // Assistant assign handler
 //   const handleAssistantSelect = async (
 //     serviceId,
 //     unitIndex,
 //     serviceName,
 //     selectedOption
 //   ) => {
-//     const assistantId = selectedOption?.value || null; // null when cleared
+//     const assistantId = selectedOption?.value || null;
 //     const assistantName = selectedOption?.label || "";
 
 //     try {
 //       await axios.put(
-//         `http://localhost:5000/api/quotations/${
-//           quotation._id || quotationId
-//         }/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`,
-//         { assistantId, assistantName }
+//         `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`, { assistantId, assistantName, eventStartDate: pkg.eventStartDate, slot: pkg.slot }
 //       );
 
 //       // reflect in UI
@@ -146,7 +162,7 @@
 //           const arr = Array.isArray(copy.assignedAssistants)
 //             ? [...copy.assignedAssistants]
 //             : Array(qty).fill(null);
-//           arr[unitIndex] = assistantId ? { assistantId, assistantName } : null; // allow clearing
+//           arr[unitIndex] = assistantId ? { assistantId, assistantName } : null;
 //           copy.assignedAssistants = arr;
 //           return copy;
 //         });
@@ -158,10 +174,35 @@
 //           ? `Assistant assigned: ${assistantName || "Updated"}`
 //           : "Assistant cleared"
 //       );
+
+//       // 🔄 Re-fetch available vendors after assistant change
+//       if (serviceName && pkg?.eventStartDate && pkg?.slot) {
+//         setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
+//         try {
+//           const res = await axios.get(
+//             `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+//               serviceName
+//             )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
+//           );
+
+//           const list = res.data?.data?.availableVendors ?? [];
+//           const opts = list.map((v) => ({ id: v._id, name: v.name }));
+
+//           setAssistantOptionsMap((m) => ({ ...m, [serviceName]: opts }));
+//         } catch (err) {
+//           console.error("Re-fetch assistants error:", err);
+//           setAssistantOptionsMap((m) => ({ ...m, [serviceName]: [] }));
+//         } finally {
+//           setAssistantLoadingMap((m) => ({ ...m, [serviceName]: false }));
+//         }
+//       }
+
+//       window.location.reload();
 //     } catch (err) {
 //       console.error("Assign assistant error:", err);
 //       toast.error("Failed to assign assistant");
 //     }
+
 //   };
 
 //   if (loading || !quotation) {
@@ -171,7 +212,6 @@
 //   const customer = quotation.leadId?.persons?.[0] || {};
 //   const quotationIdStr = quotation.quotationId || quotation._id;
 
-//   // Simple react-select styling so menu overlays the table nicely
 //   const selectStyles = {
 //     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
 //     container: (base) => ({ ...base, minWidth: 200 }),
@@ -181,68 +221,33 @@
 //     <div className="container py-2">
 //       <div className="container my-4">
 //         {/* Customer Info */}
-//         <Card
-//           className="p-3 mb-3 border-0 shadow-sm"
-//           style={{ background: "#F4F4F4" }}
-//         >
+//         <Card className="p-3 mb-3 border-0 shadow-sm" style={{ background: "#F4F4F4" }}>
 //           <div className="d-flex justify-content-between align-items-center pb-3">
 //             <h5>Customer Details</h5>
 //           </div>
 //           <div className="row px-3">
 //             <div className="col-md-6" style={{ fontSize: "14px" }}>
-//               <p>
-//                 <strong>Quotation ID:</strong> {quotationIdStr}
-//               </p>
-//               <p>
-//                 <strong>Name:</strong> {customer.name || "-"}
-//               </p>
-//               <p>
-//                 <strong>Phone no:</strong> {customer.phoneNo || "-"}
-//               </p>
-//               <p>
-//                 <strong>Whatsapp no:</strong> {customer.whatsappNo || "-"}
-//               </p>
-//               <p>
-//                 <strong>Email:</strong> {customer.email || "-"}
-//               </p>
+//               <p><strong>Quotation ID:</strong> {quotationIdStr}</p>
+//               <p><strong>Name:</strong> {customer.name || "-"}</p>
+//               <p><strong>Phone no:</strong> {customer.phoneNo || "-"}</p>
+//               <p><strong>Whatsapp no:</strong> {customer.whatsappNo || "-"}</p>
+//               <p><strong>Email:</strong> {customer.email || "-"}</p>
 //             </div>
 //             <div className="col-md-6" style={{ fontSize: "14px" }}>
-//               <p>
-//                 <strong>Event Start Date:</strong>{" "}
-//                 {pkg?.eventStartDate
-//                   ? dayjs(pkg.eventStartDate).format("DD-MM-YYYY")
-//                   : "-"}
-//               </p>
-//               <p>
-//                 <strong>Event End Date:</strong>{" "}
-//                 {pkg?.eventEndDate
-//                   ? dayjs(pkg.eventEndDate).format("DD-MM-YYYY")
-//                   : "-"}
-//               </p>
-//               <p>
-//                 <strong>Slot:</strong> {pkg?.slot || "-"}
-//               </p>
-//               <p>
-//                 <strong>Venue Name:</strong> {pkg?.venueName || "-"}
-//               </p>
-//               <p>
-//                 <strong>Venue Address:</strong> {pkg?.venueAddress || "-"}
-//               </p>
+//               <p><strong>Event Start Date:</strong> {pkg?.eventStartDate ? dayjs(pkg.eventStartDate).format("DD-MM-YYYY") : "-"}</p>
+//               <p><strong>Event End Date:</strong> {pkg?.eventEndDate ? dayjs(pkg.eventEndDate).format("DD-MM-YYYY") : "-"}</p>
+//               <p><strong>Slot:</strong> {pkg?.slot || "-"}</p>
+//               <p><strong>Venue Name:</strong> {pkg?.venueName || "-"}</p>
+//               <p><strong>Venue Address:</strong> {pkg?.venueAddress || "-"}</p>
 //             </div>
 //           </div>
 //         </Card>
 
 //         {/* Vendor Assignment Table */}
 //         <Card className="border-0 p-3">
-//           <div
-//             className="table-responsive bg-white mt-3"
-//             style={{ maxHeight: "65vh", overflowY: "auto" }}
-//           >
+//           <div className="table-responsive bg-white mt-3" style={{ maxHeight: "65vh", overflowY: "auto" }}>
 //             <Table className="table table-hover align-middle">
-//               <thead
-//                 className="text-white sticky-top"
-//                 style={{ fontSize: "14px" }}
-//               >
+//               <thead className="text-white sticky-top" style={{ fontSize: "14px" }}>
 //                 <tr>
 //                   <th>SI. No.</th>
 //                   <th>Service</th>
@@ -258,32 +263,25 @@
 //                     : service.assignedVendor;
 
 //                   const isCandid = isCandidService(service.serviceName);
-//                   const currentAssistant = Array.isArray(
-//                     service.assignedAssistants
-//                   )
+//                   const currentAssistant = Array.isArray(service.assignedAssistants)
 //                     ? service.assignedAssistants[unitIndex]
 //                     : null;
 
-//                   const asstRaw =
-//                     assistantOptionsMap[service.serviceName] || [];
+//                   const asstRaw = assistantOptionsMap[service.serviceName] || [];
 //                   const asstOptions = asstRaw.map((a) => ({
 //                     value: a.id,
 //                     label: a.name,
 //                   }));
-//                   const asstLoading =
-//                     !!assistantLoadingMap[service.serviceName];
+//                   const asstLoading = !!assistantLoadingMap[service.serviceName];
 
-//                   // Current value object for react-select
 //                   const currentValue = currentAssistant?.assistantId
 //                     ? {
-//                         value: currentAssistant.assistantId,
-//                         label:
-//                           currentAssistant.assistantName ||
-//                           asstRaw.find(
-//                             (a) => a.id === currentAssistant.assistantId
-//                           )?.name ||
-//                           "Selected assistant",
-//                       }
+//                       value: currentAssistant.assistantId,
+//                       label:
+//                         currentAssistant.assistantName ||
+//                         asstRaw.find((a) => a.id === currentAssistant.assistantId)?.name ||
+//                         "Selected assistant",
+//                     }
 //                     : null;
 
 //                   return (
@@ -303,28 +301,18 @@
 //                           <div className="d-flex justify-content-center align-items-center gap-2">
 //                             <span className="text-success fw-bold">
 //                               {assignedVendor.vendorName}
-//                               {assignedVendor.category ? (
+//                               {assignedVendor.category && (
 //                                 <span className="text-muted ms-1">
 //                                   ({assignedVendor.category})
 //                                 </span>
-//                               ) : null}
+//                               )}
 //                             </span>
 //                             <OverlayTrigger
 //                               placement="top"
-//                               overlay={
-//                                 <Tooltip id="tooltip-top">
-//                                   Reassign Vendor
-//                                 </Tooltip>
-//                               }
+//                               overlay={<Tooltip id="tooltip-top">Reassign Vendor</Tooltip>}
 //                             >
 //                               <Button
-//                                 onClick={() =>
-//                                   handleCheckVendor(
-//                                     service._id,
-//                                     unitIndex,
-//                                     service.serviceName
-//                                   )
-//                                 }
+//                                 onClick={() => handleCheckVendor(service._id, unitIndex, service.serviceName)}
 //                                 variant="light"
 //                                 className="btn-sm text-black fw-bold d-flex align-items-center gap-1"
 //                               >
@@ -335,13 +323,7 @@
 //                         ) : (
 //                           <div className="text-center">
 //                             <Button
-//                               onClick={() =>
-//                                 handleCheckVendor(
-//                                   service._id,
-//                                   unitIndex,
-//                                   service.serviceName
-//                                 )
-//                               }
+//                               onClick={() => handleCheckVendor(service._id, unitIndex, service.serviceName)}
 //                               variant="light"
 //                               className="btn-sm text-black fw-bold"
 //                             >
@@ -351,27 +333,18 @@
 //                         )}
 //                       </td>
 
-//                       {/* Assistant column (react-select) */}
+//                       {/* Assistant column */}
 //                       <td>
 //                         {isCandid ? (
 //                           <Select
 //                             value={currentValue}
 //                             onChange={(opt) =>
-//                               handleAssistantSelect(
-//                                 service._id,
-//                                 unitIndex,
-//                                 service.serviceName,
-//                                 opt
-//                               )
+//                               handleAssistantSelect(service._id, unitIndex, service.serviceName, opt)
 //                             }
 //                             options={asstOptions}
 //                             isClearable
 //                             isLoading={asstLoading}
-//                             placeholder={
-//                               asstLoading
-//                                 ? "Loading assistants..."
-//                                 : "Assign Assistant"
-//                             }
+//                             placeholder={asstLoading ? "Loading assistants..." : "Assign Assistant"}
 //                             menuPortalTarget={document.body}
 //                             styles={selectStyles}
 //                           />
@@ -392,8 +365,6 @@
 // };
 
 // export default VendorAssign;
-
-
 
 
 import React, { useState, useEffect } from "react";
@@ -418,13 +389,9 @@ const VendorAssign = () => {
   const [assistantOptionsMap, setAssistantOptionsMap] = useState({});
   const [assistantLoadingMap, setAssistantLoadingMap] = useState({});
 
-
-  // Normalize service name (remove "Comp" or "Complementary")
+  // Normalize service name
   const normalizeServiceName = (name = "") =>
-    name
-      .replace(/^Comp\s+/i, "")
-      .replace(/^Complementary\s+/i, "")
-      .trim();
+    name.replace(/^Comp\s+/i, "").replace(/^Complementary\s+/i, "").trim();
 
   // fetch quotation once
   useEffect(() => {
@@ -465,11 +432,10 @@ const VendorAssign = () => {
     }))
   );
 
-  // Helper: candid-only
   const isCandidService = (name = "") =>
     name === "Candid Photographer" || name === "Candid Cinematographer";
 
-  // Prefetch assistant options for candid services
+  // Prefetch assistant options
   useEffect(() => {
     if (!pkg) return;
 
@@ -490,16 +456,15 @@ const VendorAssign = () => {
         const res = await axios.get(
           `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
             serviceName
-          )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
+          )}?startDate=${pkg.eventStartDate}&endDate=${pkg.eventEndDate}&slot=${pkg.slot}`
         );
 
-        // ✅ FIX: use availableVendors array
         const list = res.data?.data?.availableVendors ?? [];
         const opts = list.map((v) => ({ id: v._id, name: v.name }));
 
         setAssistantOptionsMap((m) => ({ ...m, [serviceName]: opts }));
       } catch (err) {
-        console.error("Fetch assistants via vendor endpoint error:", err);
+        console.error("Fetch assistants error:", err);
         setAssistantOptionsMap((m) => ({ ...m, [serviceName]: [] }));
       } finally {
         setAssistantLoadingMap((m) => ({ ...m, [serviceName]: false }));
@@ -521,15 +486,14 @@ const VendorAssign = () => {
         unitIndex,
         slot: quotation?.packages[0]?.slot,
         eventStartDate: quotation?.packages[0]?.eventStartDate,
+        eventEndDate: quotation?.packages[0]?.eventEndDate, // ✅ added
         returnPath: `/vendors/vendor-assign/${quotationId}/${packageId}`,
         isReassign: true,
       },
     });
   };
 
-
-  // Assistant assign handler
-  // Assistant assign handler
+  // Assign Assistant
   const handleAssistantSelect = async (
     serviceId,
     unitIndex,
@@ -541,7 +505,14 @@ const VendorAssign = () => {
 
     try {
       await axios.put(
-        `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`, { assistantId, assistantName, eventStartDate: pkg.eventStartDate, slot: pkg.slot }
+        `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`,
+        {
+          assistantId,
+          assistantName,
+          eventStartDate: pkg.eventStartDate,
+          eventEndDate: pkg.eventEndDate,
+          slot: pkg.slot,
+        }
       );
 
       // reflect in UI
@@ -571,14 +542,14 @@ const VendorAssign = () => {
           : "Assistant cleared"
       );
 
-      // 🔄 Re-fetch available vendors after assistant change
+      // 🔄 Re-fetch after assistant change
       if (serviceName && pkg?.eventStartDate && pkg?.slot) {
         setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
         try {
           const res = await axios.get(
             `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
               serviceName
-            )}?date=${pkg.eventStartDate}&slot=${pkg.slot}`
+            )}?startDate=${pkg.eventStartDate}&endDate=${pkg.eventEndDate}&slot=${pkg.slot}`
           );
 
           const list = res.data?.data?.availableVendors ?? [];
@@ -598,7 +569,6 @@ const VendorAssign = () => {
       console.error("Assign assistant error:", err);
       toast.error("Failed to assign assistant");
     }
-
   };
 
   if (loading || !quotation) {
@@ -672,12 +642,12 @@ const VendorAssign = () => {
 
                   const currentValue = currentAssistant?.assistantId
                     ? {
-                      value: currentAssistant.assistantId,
-                      label:
-                        currentAssistant.assistantName ||
-                        asstRaw.find((a) => a.id === currentAssistant.assistantId)?.name ||
-                        "Selected assistant",
-                    }
+                        value: currentAssistant.assistantId,
+                        label:
+                          currentAssistant.assistantName ||
+                          asstRaw.find((a) => a.id === currentAssistant.assistantId)?.name ||
+                          "Selected assistant",
+                      }
                     : null;
 
                   return (

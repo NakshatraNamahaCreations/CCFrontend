@@ -21,6 +21,7 @@ import {
 } from "react-icons/fa";
 import PaymentStatsChart from "./PaymentStatsChart";
 
+
 const Dashboard = () => {
   const [newQueriesCount, setNewQueriesCount] = useState(0);
   const [followupCounts, setFollowupCounts] = useState(0);
@@ -118,7 +119,7 @@ const Dashboard = () => {
     fetchPendingPaymentCount();
     fetchTodaysEventsCount();
     fetchCompletedQuotationsCount();
-    fetchTodaysCallfollowupCount()
+    fetchTodaysCallfollowupCount();
   }, []);
 
   const preProductionData = [
@@ -212,7 +213,6 @@ const Dashboard = () => {
     //   subtitle: "Vendors",
     //   icon: <FaPencilAlt size={20} />,
     // },
-  
 
     {
       title: "Project Delivery",
@@ -299,7 +299,9 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <PaymentStatsChart/>
+      <PaymentStatsChart />
+
+
     </div>
   );
 };
