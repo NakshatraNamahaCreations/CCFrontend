@@ -21,6 +21,7 @@ import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
 import DynamicPagination from "../DynamicPagination";
 import { FaEye } from "react-icons/fa"; // eye icon
+import { API_URL } from "../../utils/api";
 
 // ---- Date helpers: handle "DD-MM-YYYY" and ISO strings ----
 const parseMaybeDdmmyyyy = (str) => {
@@ -192,7 +193,7 @@ const PaymentPage = () => {
       const formattedStartDate = formatDateForAPI(startDate);
       const formattedEndDate = formatDateForAPI(endDate);
 
-      const url = `http://localhost:5000/api/payments/completed?page=${clientPage}&limit=10&search=${encodeURIComponent(
+      const url = `${API_URL}/payments/completed?page=${clientPage}&limit=10&search=${encodeURIComponent(
         clientSearch || ""
       )}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
 
@@ -239,7 +240,7 @@ const PaymentPage = () => {
   const fetchVendorPayments = async (status, page, search) => {
     setVendorLoading(true);
     try {
-      const url = `http://localhost:5000/api/vendors/vendor-payments?status=${status}&page=${page}&limit=10&search=${encodeURIComponent(
+      const url = `${API_URL}/vendors/vendor-payments?status=${status}&page=${page}&limit=10&search=${encodeURIComponent(
         search || ""
       )}`;
 
@@ -367,7 +368,7 @@ const PaymentPage = () => {
       console.log("event", event);
 
       await axios.put(
-        `http://localhost:5000/api/vendors/pay-vendor/${payingVendor.vendorId}`,
+        `${API_URL}/vendors/pay-vendor/${payingVendor.vendorId}`,
         {
           paymentMode: payForm.paymentMode,
           paymentDate: payForm.paymentDate,
@@ -391,7 +392,7 @@ const PaymentPage = () => {
       const formattedStartDate = formatDateForAPI(startDate);
       const formattedEndDate = formatDateForAPI(endDate);
 
-      const url = `http://localhost:5000/api/payments/completed?search=${encodeURIComponent(
+      const url = `${API_URL}/payments/completed?search=${encodeURIComponent(
         search
       )}&startDate=${formattedStartDate}&endDate=${formattedEndDate}&all=true`;
 
@@ -435,7 +436,7 @@ const PaymentPage = () => {
   // Vendor Excel download (Pending / Completed)
   const handleDownloadVendorExcel = async (status, search) => {
     try {
-      const url = `http://localhost:5000/api/vendors/vendor-payments?status=${status}&search=${encodeURIComponent(
+      const url = `${API_URL}/vendors/vendor-payments?status=${status}&search=${encodeURIComponent(
         search || ""
       )}&all=true`;
 
@@ -479,7 +480,7 @@ const PaymentPage = () => {
   const handleDownloadExpensesExcel = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/other-expenses?search=${encodeURIComponent(
+        `${API_URL}/other-expenses?search=${encodeURIComponent(
           expenseSearch || ""
         )}&all=true`
       );
@@ -510,7 +511,7 @@ const PaymentPage = () => {
   const fetchOtherExpenses = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/other-expenses?page=${expensePage}&limit=10&search=${encodeURIComponent(
+        `${API_URL}/other-expenses?page=${expensePage}&limit=10&search=${encodeURIComponent(
           expenseSearch || ""
         )}`
       );
@@ -539,7 +540,7 @@ const PaymentPage = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/other-expenses",
+        `${API_URL}/other-expenses`,
         newExpense
       );
       toast.success("Expense added successfully");

@@ -3,6 +3,7 @@ import { Form, Button, Card, Modal, Dropdown } from "react-bootstrap";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from '../../utils/api';
 
 const EquipmentDetails = () => {
   const [showModal, setShowModal] = useState(false);
@@ -21,7 +22,7 @@ const EquipmentDetails = () => {
   useEffect(() => {
     const fetchMaintenance = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/inventory/maintenance/${id}`);
+        const response = await axios.get(`${API_URL}/inventory/maintenance/${id}`);
         if (response.data.success) {
           setMaintenance(response.data.data);
           setStatus(response.data.data.status || "Select Status");
@@ -45,7 +46,7 @@ const EquipmentDetails = () => {
 
   const handleDropdownSelect = async (eventKey) => {
     try {
-      const response = await axios.patch(`http://localhost:5000/api/inventory/maintenance/${id}`, {
+      const response = await axios.patch(`${API_URL}/inventory/maintenance/${id}`, {
         status: eventKey,
       });
       if (response.data.success) {
@@ -63,7 +64,7 @@ const EquipmentDetails = () => {
 
   const handleDone = async () => {
     try {
-      const response = await axios.patch(`http://localhost:5000/api/inventory/maintenance/${id}`, {
+      const response = await axios.patch(`${API_URL}/inventory/maintenance/${id}`, {
         remarks,
         resolved: true,
       });

@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Multiselect } from "multiselect-react-dropdown";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const VendorDetails = () => {
   const [vendorCat, setVendorCat] = useState("");
@@ -17,7 +18,7 @@ const VendorDetails = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/service/all");
+        const res = await axios.get(`${API_URL}/service/all`);
         if (res.data.success) {
           const specialization = res.data.data.map((service) => ({
             id: service._id, // Force unique ID
@@ -26,21 +27,16 @@ const VendorDetails = () => {
 
           // Static specialization for driver
           const staticSpecialization = [
-            // { id: "traditional-photography", name: "Traditional Photography" },
-            // { id: "traditional-videography", name: "Traditional Videography" },
-            // { id: "candid-photography", name: "Candid Photography" },
-            // { id: "candid-videography", name: "Candid Videography" },
-
-            // { id: "candid-photo-editing", name: "Candid photo editing" },
-            // {
-            //   id: "traditional-video-editing",
-            //   name: "Traditional Video editing",
-            // },
-            // {
-            //   id: "traditional-photo-editing",
-            //   name: "Traditional Photo editing",
-            // },
-            // { id: "candid-video-editing", name: "Candid Video editing" },
+            { id: "candid-photo-editing", name: "Candid photo editing" },
+            {
+              id: "traditional-video-editing",
+              name: "Traditional Video editing",
+            },
+            {
+              id: "traditional-photo-editing",
+              name: "Traditional Photo editing",
+            },
+            { id: "candid-video-editing", name: "Candid Video editing" },
             { id: "album-designing", name: "Album Designing" },
             { id: "photo-sorting", name: "Photo sorting" },
             { id: "video-sorting", name: "Video sorting/Conversion" },
@@ -48,17 +44,13 @@ const VendorDetails = () => {
             { id: "driver", name: "Driver" },
             { id: "cc-admin", name: "CC Admin" },
             { id: "cr-manager", name: "CR Manager" },
-            { id: "drone", name: "Drone" },
-            { id: "led-wall-6x8", name: "LED wall 6X8" },
-            { id: "led-wall-8x10", name: "LED wall 8X10" },
-            { id: "fpv-drone", name: "FPV Drone" },
-            { id: "photobooth", name: "Photobooth" },
-            { id: "magic-mirror-photobooth", name: "Magic mirror photobooth" },
-            { id: "spinny-360", name: "360 degree Spinny" },
-            { id: "mixing-unit", name: "Mixing Unit" },
-            { id: "live-streaming", name: "Live Streaming" },
-            { id: "video-3d", name: "3D Video" },
-            { id: "vr-360", name: "360 degree VR Video" },
+            // { id: "photobooth", name: "Photobooth" },
+            // { id: "magic-mirror-photobooth", name: "Magic mirror photobooth" },
+            // { id: "spinny-360", name: "360 degree Spinny" },
+            // { id: "mixing-unit", name: "Mixing Unit" },
+            // { id: "live-streaming", name: "Live Streaming" },
+            // { id: "video-3d", name: "3D Video" },
+            // { id: "vr-360", name: "360 degree VR Video" },
             { id: "makeup-artist", name: "Make up Artist" },
             { id: "speakers-audio", name: "Speakers & Audio arrangements" },
             { id: "album-final-correction", name: "Album final correction" },
@@ -258,12 +250,9 @@ const VendorDetails = () => {
 
     // Validation for PAN and Aadhaar
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    const { panNumber, aadhaarNumber } = vendorDetails.bankDetails;
+    const { panNumber } = vendorDetails.bankDetails;
 
-    if (aadhaarNumber.length !== 12) {
-      return toast.error("Aadhaar number must be exactly 12 digits");
-    }
-
+    
     if (panNumber && panNumber.length > 0 && !panRegex.test(panNumber)) {
       return toast.error("Invalid PAN number format");
     }
@@ -313,8 +302,8 @@ const VendorDetails = () => {
 
       const response =
         id !== "new"
-          ? await axios.put(`http://localhost:5000/api/vendors/${id}`, payload)
-          : await axios.post("http://localhost:5000/api/vendors", payload);
+          ? await axios.put(`${API_URL}/vendors/${id}`, payload)
+          : await axios.post(`${API_URL}/vendors`, payload);
 
       if (response.data.success) {
         toast.success(
@@ -388,7 +377,7 @@ const VendorDetails = () => {
                   type="email"
                   value={vendorDetails.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  required
+                  
                 />
               </Form.Group>
             </div>

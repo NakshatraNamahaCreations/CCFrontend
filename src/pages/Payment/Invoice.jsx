@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Table, Card, Image, Row, Col } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import logo from "../../assets/icons/logo.png";
+import { API_URL } from '../../utils/api';
 
 const Invoice = () => {
   const { quotationId } = useParams();
@@ -13,7 +14,7 @@ const Invoice = () => {
     const fetchQuotation = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/quotations/${quotationId}`);
+        const res = await fetch(`${API_URL}/quotations/${quotationId}`);
         const data = await res.json();
         if (data?.success) {
           setQuotation(data.quotation);

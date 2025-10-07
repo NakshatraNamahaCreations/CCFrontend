@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import axios from "axios";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const Services = () => {
   const [showModal, setShowModal] = useState(false);
@@ -27,7 +28,7 @@ const Services = () => {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
 
-  const API_URL = "http://localhost:5000/api/service";
+  // const API_URL = `${API_URL}/service`;
 
   // Fetch services on mount, page, or search change
   useEffect(() => {
@@ -39,7 +40,7 @@ const Services = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(searchValue)}`
+        `${API_URL}/service?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(searchValue)}`
       );
       setServices(
         response.data.data.map((svc) => ({
@@ -81,7 +82,7 @@ const Services = () => {
     try {
       if (isEditing && editingId) {
         // Update service API call
-        const response = await axios.put(`${API_URL}/${editingId}`, {
+        const response = await axios.put(`${API_URL}/service/${editingId}`, {
           name: newService.serviceName,
           price: Number(newService.price),
           marginPrice: Number(newService.marginPrice),
@@ -100,7 +101,7 @@ const Services = () => {
         );
       } else {
         // Create new service API call
-        const response = await axios.post(API_URL, {
+        const response = await axios.post(`${API_URL}/service`, {
           name: newService.serviceName,
           price: Number(newService.price),
           marginPrice: Number(newService.marginPrice),
@@ -140,7 +141,7 @@ const Services = () => {
     const id = services[index]._id;
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${API_URL}/service/${id}`);
       // If last item on page is deleted, go to previous page if needed
       if (services.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -159,7 +160,7 @@ const Services = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?search=${encodeURIComponent(search)}`
+        `${API_URL}/service?search=${encodeURIComponent(search)}`
       );
       const allServices = response.data.data.map((svc) => ({
         serviceName: svc.name,

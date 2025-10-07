@@ -209,6 +209,7 @@ import { Table, Button, Modal } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
+import { API_URL } from "../../utils/api";
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-GB") : "N/A"; // DD/MM/YYYY
@@ -235,7 +236,7 @@ const CallFollowUpsByDate = () => {
       setLoading(true);
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/lead/call-later-by-date?date=${selectedDate}`
+          `${API_URL}/lead/call-later-by-date?date=${selectedDate}`
         );
         if (res.data?.success) {
           setCallLaterData(res.data.data || []);

@@ -3,6 +3,7 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { Table, Card, Button } from "react-bootstrap";
 import dayjs from "dayjs"; // ✅ Import dayjs
+import { API_URL } from "../../utils/api";
 
 const AssignmentDetails = () => {
   const { assignmentId } = useParams();
@@ -15,7 +16,7 @@ const AssignmentDetails = () => {
     const fetchSubmissionDetails = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/task-submission/${assignmentId}`
+          `${API_URL}/task-submission/${assignmentId}`
         );
 
         if (

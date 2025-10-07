@@ -294,6 +294,7 @@ import BookedQuotationsByQuery from "./pages/Booking/BookedQuotationsByQuery.jsx
 import "react-calendar/dist/Calendar.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./App.css";
+import SortedDataList from "./pages/Postproduction/SortedDataList.jsx";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -367,6 +368,7 @@ function App() {
                 <Route path="/follow-ups/call-later" element={<CallFollowUpsByDate />} />
                 <Route path="/follow-ups/date/:date" element={<PaymentFollowUpsByDate />} />
                 <Route path="/booking/by-query/:queryId" element={<BookedQuotationsByQuery />} />
+                <Route path="/post-production/post-production-detail/sorted-data/:quotationId" element={<SortedDataList />} />
               </Routes>
             </Layout>
           </>

@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const InventoryCard = ({ inventory }) => {
   const [imageError, setImageError] = useState(false);
@@ -68,7 +69,7 @@ const InventoryList = () => {
   const fetchInventories = async (page = 1, searchValue = "") => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/api/inventory", {
+      const response = await axios.get(`${API_URL}/inventory`, {
         params: { page, limit: 6, search: searchValue },
       });
       if (response.data.success) {

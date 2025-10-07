@@ -50,7 +50,7 @@
 //   const fetchAssignedCounts = async () => {
 //     try {
 //       const res = await axios.get(
-//         "http://localhost:5000/api/task/assigned-counts",
+//         "http://localhost:5000/api/sorting-task/assigned-counts",
 //         {
 //           params: {
 //             quotationId,
@@ -123,7 +123,7 @@
 
 //     try {
 //       const res = await axios.post(
-//         "http://localhost:5000/api/task/assign-task",
+//         "http://localhost:5000/api/sorting-task/assign-task",
 //         payload
 //       );
 //       if (res.data.success) {
@@ -408,7 +408,7 @@
 //   const fetchAssignedCounts = async () => {
 //     try {
 //       const res = await axios.get(
-//         "http://localhost:5000/api/task/assigned-counts",
+//         "http://localhost:5000/api/sorting-task/assigned-counts",
 //         { params: { quotationId, eventId } }
 //       );
 //       if (res.data.success) {
@@ -474,7 +474,7 @@
 
 //     try {
 //       const res = await axios.post(
-//         "http://localhost:5000/api/task/assign-task",
+//         "http://localhost:5000/api/sorting-task/assign-task",
 //         payload
 //       );
 //       if (res.data.success) {
@@ -781,6 +781,7 @@ import {
 } from "react-bootstrap";
 import { FaTasks, FaEye, FaCheck, FaSpinner } from "react-icons/fa";
 import Select from "react-select";
+import { API_URL } from "../../utils/api";
 
 const STATUS_OPTIONS = ["Pending", "In Process", "Completed"];
 
@@ -820,7 +821,7 @@ const EventServicesTable = () => {
       setError("");
 
       const res = await axios.get(
-        `http://localhost:5000/api/collected-data/${collectedDataId}/service-unit/${serviceUnitId}`
+        `${API_URL}/collected-data/${collectedDataId}/service-unit/${serviceUnitId}`
       );
 
       if (res.data.success) {
@@ -840,7 +841,7 @@ const EventServicesTable = () => {
   // 🔹 Fetch vendors
   const fetchVendors = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/vendors/vendor-by-category/inhouse");
+      const res = await axios.get(`${API_URL}/vendors/vendor-by-category/inhouse`);
       if (res.data.success) {
         const formatted = res.data.data.map((v) => ({
           value: v._id,
@@ -859,7 +860,7 @@ const EventServicesTable = () => {
   const fetchAssignedCounts = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/task/assigned-counts",
+        `${API_URL}/sorting-task/assigned-counts`,
         {
           params: {
             quotationId: serviceUnit?.quotationId,
@@ -946,7 +947,7 @@ const EventServicesTable = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/task/assign-task",
+        `${API_URL}/sorting-task/assign-task`,
         payload
       );
       if (res.data.success) {
@@ -965,7 +966,7 @@ const EventServicesTable = () => {
   const updateEventStatus = async () => {
     try {
       setUpdatingStatus(true);
-      const url = `http://localhost:5000/api/collected-data/${collectedDataId}/events/${serviceUnitId}/status`;
+      const url = `${API_URL}/collected-data/${collectedDataId}/events/${serviceUnitId}/status`;
       const res = await axios.put(url, { newStatus: selectedStatus });
       if (res.data?.success) {
         alert(`Status updated to ${selectedStatus}`);

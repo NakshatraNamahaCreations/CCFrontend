@@ -14,6 +14,7 @@ import axios from "axios";
 import editIcon from "../../assets/icons/editIcon.png";
 import deleteIcon from "../../assets/icons/deleteIcon.png";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const Category = () => {
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +32,7 @@ const Category = () => {
   const [searchInput, setSearchInput] = useState("");
 
   // Base URL for API
-  const API_URL = "http://localhost:5000/api/category";
+  // const API_URL = `${API_URL}/category`;
 
   // Fetch categories on mount, page, or search change
   useEffect(() => {
@@ -43,7 +44,7 @@ const Category = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
+        `${API_URL}/category?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
           searchValue
         )}`
       );
@@ -67,7 +68,7 @@ const Category = () => {
     setLoading(true);
     try {
       if (editingId) {
-        const response = await axios.put(`${API_URL}/${editingId}`, {
+        const response = await axios.put(`${API_URL}/category/${editingId}`, {
           name: newCategory,
         });
         setCategories(
@@ -76,7 +77,7 @@ const Category = () => {
           )
         );
       } else {
-        await axios.post(API_URL, { name: newCategory });
+        await axios.post(`${API_URL}/category`, { name: newCategory });
         fetchCategories(currentPage, search);
       }
       setShowModal(false);
@@ -102,7 +103,7 @@ const Category = () => {
   const handleDeleteCat = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${API_URL}/category/${id}`);
       // If last item on page is deleted, go to previous page if needed
       if (categories.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -122,7 +123,7 @@ const Category = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=1&limit=10000&search=${encodeURIComponent(search)}`
+        `${API_URL}/category?page=1&limit=10000&search=${encodeURIComponent(search)}`
       );
       const allCategories = response.data.data;
       const ws = XLSX.utils.aoa_to_sheet([

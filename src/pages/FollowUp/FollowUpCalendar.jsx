@@ -131,6 +131,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Badge, Container, Spinner, Tabs, Tab } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../utils/api';
 
 const localizer = momentLocalizer(moment);
 
@@ -150,7 +151,7 @@ const FollowUpCalendar = () => {
             try {
                 if (selectedTab === "payment") {
                     // ✅ Fetch Payment Follow-ups
-                    const response = await axios.get("http://localhost:5000/api/follow-up/");
+                    const response = await axios.get(`${API_URL}/follow-up/`);
                     if (response.data?.success) {
                         const fetchedFollowUps = response.data.data || [];
                         setFollowUps(fetchedFollowUps);
@@ -184,7 +185,7 @@ const FollowUpCalendar = () => {
                 } else if (selectedTab === "call") {
                     // ✅ Fetch Call Follow-ups
                     const response = await axios.get(
-                        "http://localhost:5000/api/lead/status/Call%20Later"
+                        `${API_URL}/lead/status/Call%20Later`
                     );
                     if (response.data?.success) {
                         const fetchedCallFollowUps = response.data.data || [];

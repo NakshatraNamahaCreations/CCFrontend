@@ -85,6 +85,7 @@ import {
     ResponsiveContainer,
     LabelList,
 } from "recharts";
+import { API_URL } from "../utils/api";
 
 const PaymentStatsChart = () => {
     const [data, setData] = useState([]);
@@ -93,8 +94,8 @@ const PaymentStatsChart = () => {
         const fetchStats = async () => {
             try {
                 const [clientRes, vendorRes] = await Promise.all([
-                    axios.get("http://localhost:5000/api/quotations/stats/client-payments"),
-                    axios.get("http://localhost:5000/api/quotations/stats/vendor-payments"),
+                    axios.get(`${API_URL}/quotations/stats/client-payments`),
+                    axios.get(`${API_URL}/quotations/stats/vendor-payments`),
                 ]);
 
                 const clientData = clientRes.data.data;

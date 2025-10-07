@@ -238,6 +238,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import sortIcon from "../../assets/icons/sort.png";
 import filterIcon from "../../assets/icons/filter.png";
+import { API_URL } from "../../utils/api";
 
 const AvailableVendors = () => {
   const location = useLocation();
@@ -274,7 +275,7 @@ const AvailableVendors = () => {
       setLoading(true);
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+          `${API_URL}/vendors/service-name/${encodeURIComponent(
             serviceName
           )}?startDate=${eventStartDate}&endDate=${eventEndDate}&slot=${
             slot
@@ -312,7 +313,7 @@ const AvailableVendors = () => {
 
   const handleAssignVendor = async (vendor) => {
     try {
-      const url = `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-vendor`;
+      const url = `${API_URL}/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-vendor`;
 
       const body = {
         vendorId: vendor._id || vendor.id,

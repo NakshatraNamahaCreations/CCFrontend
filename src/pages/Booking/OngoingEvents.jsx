@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button, Card, Table, Container } from "react-bootstrap";
 import { IoChevronForward } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../utils/api";
 
 
 const OngoingEvents = () => {
@@ -10,10 +11,10 @@ const OngoingEvents = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/quotations/today")
+    fetch(`${API_URL}/quotations/today`)
       .then(res => res.json())
       .then(data => {
-        console.log("Raw data from /api/quotations/today:", data);
+      
         if (data.success) {
           setTodayEvents(data.data);
         } else {

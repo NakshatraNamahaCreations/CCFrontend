@@ -6,6 +6,7 @@ import sortIcon from "../../assets/icons/sort.png";
 import filterIcon from "../../assets/icons/filter.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const Maintenance = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const Maintenance = () => {
   useEffect(() => {
     const fetchMaintenance = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/inventory/maintenance");
+        const response = await axios.get(`${API_URL}/inventory/maintenance`);
         if (response.data.success) {
           setMaintenanceList(response.data.data);
           setFilteredList(response.data.data);

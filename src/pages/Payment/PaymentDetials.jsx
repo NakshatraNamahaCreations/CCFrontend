@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import dayjs from "dayjs";
+import { API_URL } from "../../utils/api";
 
 const paymentModes = [
   { value: "", label: "-" },
@@ -51,7 +52,7 @@ const PaymentDetials = () => {
   const fetchQuotation = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/quotations/${quotationId}`);
+      const { data } = await axios.get(`${API_URL}/quotations/${quotationId}`);
       if (data?.success && data?.quotation) {
         setQuotation(data.quotation);
         setInstallments(Array.isArray(data.quotation.installments) ? data.quotation.installments : []);
@@ -95,7 +96,7 @@ const PaymentDetials = () => {
         status: paymentData.status,
       };
 
-      const url = `http://localhost:5000/api/quotations/${quotationId}/installment/${selectedInstallment._id}`;
+      const url = `${API_URL}/quotations/${quotationId}/installment/${selectedInstallment._id}`;
       const res = await axios.put(url, payload);
 
       if (res.data?.success) {
@@ -118,7 +119,7 @@ const PaymentDetials = () => {
     setGeneratingInvoice(true);
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/quotations/${quotation?._id}/generate-invoice`
+        `${API_URL}/quotations/${quotation?._id}/generate-invoice`
       );
       if (res.data?.success) {
         toast.success("Invoice generated!");

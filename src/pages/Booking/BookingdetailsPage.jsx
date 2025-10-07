@@ -39,6 +39,7 @@ import AlbumDetailsModal from "../Albums/AlbumDetailsModal";
 import { computeAlbumTotal, fmt } from "../../utils/albumUtils";
 import { BsDatabaseFillAdd, BsDatabaseFillCheck } from "react-icons/bs";
 import { BsCheckCircleFill } from "react-icons/bs";
+import { API_URL } from "../../utils/api";
 
 const Chip = ({ children, tone = "light" }) => (
   <span className={`chip chip-${tone}`}>{children}</span>
@@ -178,7 +179,7 @@ const BookingdetailsPage = () => {
   const handleSavePersonDetails = async () => {
     try {
       const res = await axios.put(
-        `http://localhost:5000/api/lead/${quotationData?.leadId?._id}/person/${editingPerson._id}`,
+        `${API_URL}/lead/${quotationData?.leadId?._id}/person/${editingPerson._id}`,
         {
           instagramHandle: personFormData.instagramHandle,
           email: personFormData.email,
@@ -214,7 +215,7 @@ const BookingdetailsPage = () => {
     if (!newInstruction.trim()) return;
     try {
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${id}/instruction/add`,
+        `${API_URL}/quotations/${id}/instruction/add`,
         { instruction: newInstruction.trim() }
       );
       setQuotationData((prev) => ({
@@ -232,7 +233,7 @@ const BookingdetailsPage = () => {
   const handleRemoveInstruction = async (instructionToDelete) => {
     try {
       const res = await axios.delete(
-        `http://localhost:5000/api/quotations/${id}/instruction/delete`,
+        `${API_URL}/quotations/${id}/instruction/delete`,
         { data: { instruction: instructionToDelete } }
       );
       setQuotationData((prev) => ({
@@ -250,7 +251,7 @@ const BookingdetailsPage = () => {
     const fetchCollectedData = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/collected-data/${id}`
+          `${API_URL}/collected-data/${id}`
         );
         setCollectedDataList(res.data.data);
       } catch (err) {
@@ -262,7 +263,7 @@ const BookingdetailsPage = () => {
 
   const fetchQuotation = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/quotations/${id}`);
+      const res = await axios.get(`${API_URL}/quotations/${id}`);
       const q = res.data.quotation;
       setQuotationData(q);
       setInstallments(q.installments || []);
@@ -372,7 +373,7 @@ const BookingdetailsPage = () => {
 
     try {
       await axios.put(
-        `http://localhost:5000/api/quotations/${id}/totals-min`,
+        `${API_URL}/quotations/${id}/totals-min`,
         payload
       );
       await fetchQuotation(); // refresh
@@ -516,7 +517,7 @@ const BookingdetailsPage = () => {
     try {
       const payload = buildMinimalTotals(albumsOverride, null, discountValue);
       await axios.put(
-        `http://localhost:5000/api/quotations/${id}/totals-min`,
+        `${API_URL}/quotations/${id}/totals-min`,
         payload
       );
       fetchQuotation();
@@ -548,7 +549,7 @@ const BookingdetailsPage = () => {
     console.log("payload", payload);
 
     const res = await axios.put(
-      `http://localhost:5000/api/quotations/${id}/totals-min`,
+      `${API_URL}/quotations/${id}/totals-min`,
       payload
     );
 
@@ -792,7 +793,7 @@ const BookingdetailsPage = () => {
         notes: collectData.notes,
       };
 
-      await axios.post("http://localhost:5000/api/collected-data/", payload);
+      await axios.post(`${API_URL}/collected-data/`, payload);
 
       toast.success(
         editMode ? "Data updated successfully" : "Data collected successfully"
@@ -854,13 +855,13 @@ const BookingdetailsPage = () => {
       if (inst._id) {
         // 🔁 Update existing installment
         response = await axios.put(
-          `http://localhost:5000/api/quotations/${id}/installment/${inst._id}`,
+          `${API_URL}/quotations/${id}/installment/${inst._id}`,
           payload
         );
       } else {
         // 🆕 Create new installment (use `new` as dummy ID)
         response = await axios.put(
-          `http://localhost:5000/api/quotations/${id}/installment/new`,
+          `${API_URL}/quotations/${id}/installment/new`,
           payload
         );
       }
@@ -886,7 +887,7 @@ const BookingdetailsPage = () => {
 
     try {
       await axios.delete(
-        `http://localhost:5000/api/quotations/${id}/installment/${inst._id}`
+        `${API_URL}/quotations/${id}/installment/${inst._id}`
       );
       toast.success("Installment deleted successfully");
 
@@ -1021,7 +1022,7 @@ const BookingdetailsPage = () => {
 
     try {
       const res = await axios.delete(
-        `http://localhost:5000/api/quotations/${id}/albums/${albumId}`
+        `${API_URL}/quotations/${id}/albums/${albumId}`
       );
 
       // Prefer server list; fallback to local
@@ -1093,7 +1094,7 @@ const BookingdetailsPage = () => {
         accountHolders: [{ name }],
       };
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${id}/installment/${selectedInstallment._id}`,
+        `${API_URL}/quotations/${id}/installment/${selectedInstallment._id}`,
         payload
       );
 
@@ -2345,7 +2346,7 @@ const BookingdetailsPage = () => {
 
                 // ✅ Call unified API
                 const res = await axios.put(
-                  `http://localhost:5000/api/quotations/${id}/group-note`,
+                  `${API_URL}/quotations/${id}/group-note`,
                   payload
                 );
 

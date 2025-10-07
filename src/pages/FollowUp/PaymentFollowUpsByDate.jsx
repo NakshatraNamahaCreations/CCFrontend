@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Badge, Container, Row, Col, Card, Modal, Form, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import moment from 'moment';
+import { API_URL } from '../../utils/api';
 
 const PaymentFollowUpsByDate = () => {
     const { date } = useParams();
@@ -26,7 +27,7 @@ const PaymentFollowUpsByDate = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const response = await axios.get(`http://localhost:5000/api/follow-up/date/${date}`);
+                const response = await axios.get(`${API_URL}/follow-up/date/${date}`);
                 if (response.data?.success) {
                     setFollowUps(response.data.data || []);
                 }
@@ -73,7 +74,7 @@ const PaymentFollowUpsByDate = () => {
         try {
             setApiError(null);
             const response = await axios.put(
-                `http://localhost:5000/api/follow-up/${selectedFollowUp.quotationId}/status`,
+                `${API_URL}/follow-up/${selectedFollowUp.quotationId}/status`,
                 {
                     status,
                     notes: notes.trim(),

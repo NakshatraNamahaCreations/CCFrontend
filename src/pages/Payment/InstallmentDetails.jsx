@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import dayjs from "dayjs";
+import { API_URL } from "../../utils/api";
 
 const paymentModes = [
   { value: "", label: "-" },
@@ -45,7 +46,7 @@ const InstallmentDetails = () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/quotations/${quotationId}`
+        `${API_URL}/quotations/${quotationId}`
       );
       const data = await res.json();
       if (data?.success) {
@@ -119,7 +120,7 @@ const handlePaymentClick = (installment) => {
       };
 
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${quotationId}/installments/${selectedInstallment._id}/first-payment`,
+        `${API_URL}/quotations/${quotationId}/installments/${selectedInstallment._id}/first-payment`,
         payload
       );
 

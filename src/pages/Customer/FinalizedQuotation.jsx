@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import axios from "axios";
+import { API_URL } from "../../utils/api";
 
 const money = (n) => `₹${(Number(n) || 0).toLocaleString()}`;
 
@@ -71,7 +72,7 @@ const FinalizedQuotation = () => {
     const fetchQuotation = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5000/api/quotations/${id}`);
+        const res = await fetch(`${API_URL}/quotations/${id}`);
         const data = await res.json();
         if (data?.success) {
           setQuotation(data.quotation);
@@ -215,7 +216,7 @@ const FinalizedQuotation = () => {
 
       try {
         const res = await axios.put(
-          `http://localhost:5000/api/quotations/${id}/booking-status`,
+          `${API_URL}/quotations/${id}/booking-status`,
           {
             status: "Booked",
             queryId: quotation.queryId,
@@ -719,7 +720,14 @@ const FinalizedQuotation = () => {
               <div className="fw-bold">{money(grandTotal)}</div>
             </div>
           </div>
+           <hr />
+            {q?.quoteNote && (
+              <div className="mt-2 fw-bold fs-6 bg-warning p-2 rounded bg-opacity-25">
+                Note : <span>{q?.quoteNote || "N/A"}</span>
+              </div>
+            )}
 
+         
           {/* Show installments only if they exist */}
           {/* Installments Section */}
           {hasInstallments && (

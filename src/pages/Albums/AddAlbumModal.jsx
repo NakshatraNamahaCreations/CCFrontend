@@ -644,6 +644,7 @@ import { Modal, Button, Form, Row, Col, Collapse } from "react-bootstrap";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
+import { API_URL } from "../../utils/api";
 
 /** ---------- Config ---------- */
 export const BOX_TYPES = [
@@ -700,7 +701,7 @@ export const SHEET_TYPES = [
 const findTemplate = (id) => ALBUM_TEMPLATES.find((t) => t.id === id);
 const findBox = (id) => BOX_TYPES.find((b) => b.id === id) || BOX_TYPES[0];
 
-const API_BASE = "http://localhost:5000/api/quotations";
+const API_BASE = `${API_URL}/quotations`;
 
 /** ---------- Helpers (NEW) ---------- */
 // Some old rows have only `snapshot.templateLabel = "Custom: 14\" x 16\""`.

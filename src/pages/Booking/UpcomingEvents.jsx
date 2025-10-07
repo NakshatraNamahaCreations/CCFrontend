@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const UpcomingEvents = () => {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ const UpcomingEvents = () => {
       setLoading(true);
       try {
         const url = date 
-          ? `http://localhost:5000/api/quotations/upcoming?date=${date}`
-          : "http://localhost:5000/api/quotations/upcoming";
+          ? `${API_URL}/quotations/upcoming?date=${date}`
+          : `${API_URL}/quotations/upcoming`;
 
         const response = await axios.get(url);
 

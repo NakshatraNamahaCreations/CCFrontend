@@ -5,6 +5,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Select from "react-select";
 import { IoEye } from "react-icons/io5";
+import { API_URL } from "../../utils/api";
 
 const referenceOptions = [
   { label: "Google", value: "Google" },
@@ -51,7 +52,7 @@ const AddleadsForm = () => {
     const fetchCategories = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/category/all"
+          `${API_URL}/category/all`
         );
         setCategories(response.data.data || []);
       } catch (err) {
@@ -66,7 +67,7 @@ const AddleadsForm = () => {
     const fetchReferenceOptions = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/reference/"
+          `${API_URL}/reference/`
         );
         const formattedOptions = response.data.data.map((item) => ({
           value: item._id,
@@ -117,7 +118,7 @@ const AddleadsForm = () => {
     if (onlyDigits.length >= 3) {
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/lead/searchByPhonePrefix?prefix=${onlyDigits.slice(
+          `${API_URL}/lead/searchByPhonePrefix?prefix=${onlyDigits.slice(
             0,
             3
           )}`
@@ -161,7 +162,7 @@ const AddleadsForm = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/lead/searchByPhone?phoneNo=${searchPhone}`
+        `${API_URL}/lead/searchByPhone?phoneNo=${searchPhone}`
       );
       const leads = response.data;
       if (leads && leads.length > 0) {
@@ -247,12 +248,12 @@ const AddleadsForm = () => {
           throw new Error("Lead _id is missing. Please search again.");
         }
         const response = await axios.post(
-          `http://localhost:5000/api/lead/${leadDetails._id}/addQueryAndPerson`,
+          `${API_URL}/lead/${leadDetails._id}/addQueryAndPerson`,
           payload
         );
         toast.success("Query and persons added successfully.");
       } else if (!leadFound) {
-        await axios.post("http://localhost:5000/api/lead/create", payload);
+        await axios.post(`${API_URL}/lead/create`, payload);
         toast.success("Lead created successfully with initial query.");
       }
       navigate("/customer");

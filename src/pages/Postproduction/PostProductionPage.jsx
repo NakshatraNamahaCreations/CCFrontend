@@ -4,6 +4,7 @@ import axios from "axios";
 import { FaEye } from "react-icons/fa";
 import DynamicPagination from "../DynamicPagination";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../utils/api";
 
 const PostProductionPage = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const PostProductionPage = () => {
 
   const fetchCollectedData = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/collected-data", {
+      const res = await axios.get(`${API_URL}/collected-data`, {
         params: { page: currentPage, limit: 10, search },
       });
 

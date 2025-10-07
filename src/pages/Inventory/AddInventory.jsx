@@ -4,6 +4,7 @@ import addIcon from "../../assets/icons/addImgicon.png";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const AddInventory = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ const AddInventory = () => {
     formDataToSend.append("autofocus", autofocus);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/inventory", formDataToSend, {
+      const response = await axios.post(`${API_URL}/inventory`, formDataToSend, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

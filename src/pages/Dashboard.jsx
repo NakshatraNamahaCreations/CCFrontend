@@ -20,6 +20,7 @@ import {
   FaBoxOpen,
 } from "react-icons/fa";
 import PaymentStatsChart from "./PaymentStatsChart";
+import { API_URL } from "../utils/api";
 
 
 const Dashboard = () => {
@@ -34,7 +35,7 @@ const Dashboard = () => {
     // ✅ Remove (req, res) parameters
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/lead/count?status=Created"
+        `${API_URL}/lead/count?status=Created`
       );
       if (response.data.success) {
         setNewQueriesCount(response.data.count);
@@ -48,7 +49,7 @@ const Dashboard = () => {
     // ✅ Remove (req, res) parameters
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/lead/count?status=Call Later`
+        `${API_URL}/lead/count?status=Call Later`
       );
       if (response.data.success) {
         setFollowupCounts(response.data.count);
@@ -61,7 +62,7 @@ const Dashboard = () => {
   const fetchPendingPaymentCount = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/quotations/count/pending-payments"
+        `${API_URL}/quotations/count/pending-payments`
       );
 
       if (response.data.success) {
@@ -75,7 +76,7 @@ const Dashboard = () => {
   const fetchTodaysEventsCount = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/quotations/count/todays-events"
+        `${API_URL}/quotations/count/todays-events`
       );
 
       if (response.data.success) {
@@ -89,7 +90,7 @@ const Dashboard = () => {
   const fetchCompletedQuotationsCount = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/quotations/count/completed"
+        `${API_URL}/quotations/count/completed`
       );
 
       if (response.data.success) {
@@ -102,7 +103,7 @@ const Dashboard = () => {
   const fetchTodaysCallfollowupCount = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:5000/api/lead/queries/rescheduled/today"
+        `${API_URL}/lead/queries/rescheduled/today`
       );
 
       if (response.data.success) {

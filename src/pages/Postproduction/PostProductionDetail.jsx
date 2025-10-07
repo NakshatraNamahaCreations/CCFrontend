@@ -27,6 +27,7 @@ import {
   FaCamera,
   FaVideo,
 } from "react-icons/fa";
+import { API_URL } from "../../utils/api";
 
 const PostProductionDetail = () => {
   const { id } = useParams();
@@ -46,9 +47,11 @@ const PostProductionDetail = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   // Add a new state for submit modal loading
   const [submitModalLoading, setSubmitModalLoading] = useState(false);
+  const [specializationOptions, setSpecializationOptions] = useState([]);
 
   const [assignData, setAssignData] = useState({
     eventName: "",
+    serviceName: "",
     vendorId: "",
     taskDescription: "",
     completionDate: "",
@@ -76,7 +79,7 @@ const PostProductionDetail = () => {
     try {
       setMarking(true);
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${quotationId}/booking-status`,
+        `${API_URL}/quotations/${quotationId}/booking-status`,
         { status: "Completed" }
       );
       if (res.data?.success) {
@@ -97,6 +100,99 @@ const PostProductionDetail = () => {
     }
   };
 
+  const fetchServices = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/service/all`);
+      if (res.data.success) {
+        const specialization = res.data.data.map((service) => ({
+          value: service._id,
+          label: service.name,
+        }));
+
+        // 🔹 Static roles
+        const staticSpecialization = [
+          { value: "candid-photo-editing", label: "Candid photo editing" },
+          {
+            value: "traditional-video-editing",
+            label: "Traditional Video editing",
+          },
+          {
+            value: "traditional-photo-editing",
+            label: "Traditional Photo editing",
+          },
+          { value: "candid-video-editing", label: "Candid Video editing" },
+          { value: "album-designing", label: "Album Designing" },
+          { value: "photo-sorting", label: "Photo sorting" },
+          { value: "video-sorting", label: "Video sorting/Conversion" },
+          { value: "assistant", label: "Assistant" },
+          { value: "driver", label: "Driver" },
+          { value: "cc-admin", label: "CC Admin" },
+          { value: "cr-manager", label: "CR Manager" },
+          { value: "makeup-artist", label: "Make up Artist" },
+          { value: "speakers-audio", label: "Speakers & Audio arrangements" },
+          { value: "album-final-correction", label: "Album final correction" },
+          {
+            value: "photo-colour-correction",
+            label: "Photo colour correction",
+          },
+          { value: "album-photo-selection", label: "Album photo selection" },
+          { value: "video-3d-editing", label: "3D Video editing" },
+          { value: "vr-360-editing", label: "360 degree VR Video editing" },
+          { value: "photo-slideshow", label: "Photo slideshow" },
+          { value: "photo-lamination", label: "Photo lamination & Frame" },
+          { value: "photo-printing-lab", label: "Photo Printing Lab" },
+          { value: "storage-devices", label: "Storage devices" },
+          {
+            value: "marketing-printing",
+            label: "Marketing collaterals Printing",
+          },
+          { value: "uniforms", label: "Uniforms" },
+          { value: "branding-collaterals", label: "Branding collaterals" },
+          { value: "software-hardware", label: "Software & Hardware service" },
+          { value: "supervisor", label: "Supervisor" },
+          { value: "marketing-team", label: "Marketing Team" },
+          { value: "branding-team", label: "Branding Team" },
+        ];
+
+        // Merge both lists
+        setSpecializationOptions([...specialization, ...staticSpecialization]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch services", err);
+    }
+  };
+
+  // Fetch vendors based on specialization name
+  const fetchVendorsBySpecialization = async (specializationName) => {
+    if (!specializationName) {
+      setVendors([]);
+      return;
+    }
+
+    try {
+      const res = await axios.get(
+        `${API_URL}/vendors/specialization/${encodeURIComponent(
+          specializationName
+        )}`
+      );
+
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setVendors(res.data.data);
+      } else {
+        setVendors([]);
+        toast.error("No vendors found for this specialization");
+      }
+    } catch (err) {
+      console.error("Error fetching vendors:", err);
+      toast.error("Failed to load vendors for the selected specialization");
+      setVendors([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
   // Fetch assigned tasks for service units
   const fetchAssignedTasks = async (serviceUnitIds) => {
     try {
@@ -104,7 +200,7 @@ const PostProductionDetail = () => {
       for (const unitId of serviceUnitIds) {
         try {
           const res = await axios.get(
-            `http://localhost:5000/api/task/service-unit/${unitId}`
+            `${API_URL}/sorting-task/service-unit/${unitId}`
           );
           if (res.data?.success && res.data.data) {
             tasks[unitId] = res.data.data; // ✅ directly store the task object
@@ -118,49 +214,27 @@ const PostProductionDetail = () => {
       console.error("Error fetching assigned tasks:", err);
     }
   };
-
   const handleOpenAssignModal = async (unit) => {
     try {
-      // Determine task type based on available photos and videos
       const hasPhotos = unit.noOfPhotos > 0;
       const hasVideos = unit.noOfVideos > 0;
 
-      let taskType = "";
-      if (hasPhotos && hasVideos) {
-        taskType = "Both";
-      } else if (hasPhotos) {
-        taskType = "PhotoSorting";
-      } else if (hasVideos) {
-        taskType = "VideoConversion";
-      }
-
       setAssignData({
         eventName: unit.packageName || "",
+        serviceName: unit.serviceName || "",
         vendorId: "",
         taskDescription: "",
         completionDate: "",
         photosCount: hasPhotos ? unit.noOfPhotos.toString() : "",
         videosCount: hasVideos ? unit.noOfVideos.toString() : "",
-        taskType: taskType,
       });
 
-      const category = "Inhouse Vendor";
-      const res = await axios.get(
-        `http://localhost:5000/api/vendors/category/${encodeURIComponent(
-          category
-        )}`
-      );
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setVendors(res.data.data);
-      } else {
-        setVendors([]);
-      }
-
+      setVendors([]);
       setSelectedUnit(unit);
       setShowAssignModal(true);
     } catch (err) {
-      console.error("Error fetching vendors:", err);
-      alert("Failed to load vendors.");
+      console.error("Error opening assign modal:", err);
+      alert("Failed to open assign task modal.");
     }
   };
 
@@ -212,11 +286,6 @@ const PostProductionDetail = () => {
         return;
       }
 
-      if (!assignData.taskType) {
-        alert("Please select a task type");
-        return;
-      }
-
       const selectedVendor = vendors.find((v) => v._id === assignData.vendorId);
 
       const taskData = {
@@ -225,7 +294,10 @@ const PostProductionDetail = () => {
         serviceUnitId: selectedUnit._id,
         vendorId: assignData.vendorId,
         vendorName: selectedVendor?.name || "Unknown Vendor",
-        taskType: assignData.taskType,
+        serviceName: assignData?.serviceName,
+        packageId: selectedUnit?.packageId,
+        packageName: selectedUnit?.packageName,
+
         taskDescription: assignData.taskDescription,
         noOfPhotos: parseInt(assignData.photosCount) || 0,
         noOfVideos: parseInt(assignData.videosCount) || 0,
@@ -238,10 +310,7 @@ const PostProductionDetail = () => {
         return;
       }
 
-      const res = await axios.post(
-        "http://localhost:5000/api/task/assign",
-        taskData
-      );
+      const res = await axios.post(`${API_URL}/sorting-task/assign`, taskData);
 
       if (res.data?.success) {
         // Update assigned tasks for this unit
@@ -254,7 +323,7 @@ const PostProductionDetail = () => {
         await refreshData();
 
         setShowAssignModal(false);
-        alert("Task assigned successfully!");
+        // alert("Task assigned successfully!");
       } else {
         alert(res.data?.message || "Failed to assign task");
       }
@@ -272,7 +341,7 @@ const PostProductionDetail = () => {
       }
 
       const res = await axios.post(
-        `http://localhost:5000/api/task/${selectedTask._id}/submit`,
+        `${API_URL}/sorting-task/${selectedTask._id}/submit`,
         {
           submittedPhotos: parseInt(submitData.submittedPhotos) || 0,
           submittedVideos: parseInt(submitData.submittedVideos) || 0,
@@ -292,7 +361,7 @@ const PostProductionDetail = () => {
 
         setShowSubmitModal(false);
         setSelectedTask(null);
-        alert("Task submitted successfully!");
+ 
       } else {
         alert(res.data?.message || "Failed to submit task");
       }
@@ -306,7 +375,7 @@ const PostProductionDetail = () => {
   const refreshData = async () => {
     try {
       const detailsRes = await axios.get(
-        `http://localhost:5000/api/collected-data/details/${id}`
+        `${API_URL}/collected-data/details/${id}`
       );
 
       if (detailsRes.data?.success && detailsRes.data?.data) {
@@ -367,7 +436,7 @@ const PostProductionDetail = () => {
         setError("");
 
         const detailsRes = await axios.get(
-          `http://localhost:5000/api/collected-data/details/${id}`
+          `${API_URL}/collected-data/details/${id}`
         );
 
         if (detailsRes.data?.success && detailsRes.data?.data) {
@@ -381,7 +450,7 @@ const PostProductionDetail = () => {
 
           if (details.quotationId) {
             const quotationRes = await axios.get(
-              `http://localhost:5000/api/quotations/${details.quotationId}`
+              `${API_URL}/quotations/${details.quotationId}`
             );
             if (quotationRes.data?.quotation) {
               setQuotation(quotationRes.data.quotation);
@@ -411,13 +480,21 @@ const PostProductionDetail = () => {
     setShowModal(false);
   };
 
+  // const handleRowClick = (unit) => {
+  //   navigate(`/post-production/post-production-detail/assign-task`, {
+  //     state: {
+  //       collectedDataId: data._id,
+  //       serviceUnitId: unit._id,
+  //     },
+  //   });
+  // };
   const handleRowClick = (unit) => {
-    navigate(`/post-production/post-production-detail/assign-task`, {
-      state: {
-        collectedDataId: data._id,
-        serviceUnitId: unit._id,
-      },
-    });
+    // console.log("data", data)
+    // if (unit.status == true) {
+    navigate(
+      `/post-production/post-production-detail/sorted-data/${data.quotationId}`
+    );
+    // }
   };
 
   // Helper functions
@@ -493,7 +570,7 @@ const PostProductionDetail = () => {
 
           <OverlayTrigger
             placement="top"
-            overlay={<Tooltip>View Task Details</Tooltip>}
+            overlay={<Tooltip>View Sorting Task Details</Tooltip>}
           >
             <Button
               variant="outline-info"
@@ -669,9 +746,7 @@ const PostProductionDetail = () => {
       {/* Quotation Details */}
       {quotation ? (
         <Card className="shadow-sm mb-4">
-          <Card.Header className="fw-bold bg-light">
-            Quotation Details
-          </Card.Header>
+          <Card.Header className="fw-bold bg-light">Events Details</Card.Header>
           <Card.Body>
             {quotation.packages?.length ? (
               <Table bordered responsive hover style={{ fontSize: "13px" }}>
@@ -734,7 +809,6 @@ const PostProductionDetail = () => {
                   <th>Album Unit Price</th>
                   <th>Box / Unit</th>
                   <th>Extras</th>
-                
                 </tr>
               </thead>
               <tbody>
@@ -809,7 +883,6 @@ const PostProductionDetail = () => {
                         {fmt(alb?.suggested?.boxPerUnit)}
                       </td>
                       <td style={{ width: "30%" }}>{extrasCell}</td>
-                    
                     </tr>
                   );
                 })}
@@ -843,9 +916,7 @@ const PostProductionDetail = () => {
                 <th>Submission Date</th>
                 <th>Notes</th>
                 <th>Backup Drive</th>
-                {/* <th>Editing Status</th> */}
-                <th>Sorting Status</th> {/* ✅ NEW COLUMN */}
-                {/* <th>Task Status</th> */}
+                <th>Sorting Status</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -857,7 +928,7 @@ const PostProductionDetail = () => {
                 return (
                   <tr
                     key={u._id || idx}
-                    // onClick={() => handleRowClick(u)}
+                    onClick={() => handleRowClick(u)}
                     style={{ transition: "background-color 0.2s" }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.backgroundColor = "#f8f9fa")
@@ -897,7 +968,7 @@ const PostProductionDetail = () => {
                         {u.sortingStatus || "Pending"}
                       </Badge>
                     </td>
-                   
+
                     <td>
                       <div className="d-flex gap-2">
                         {/* Eye Button */}
@@ -1041,24 +1112,72 @@ const PostProductionDetail = () => {
           <Modal.Title>Assign Task</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Event Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={assignData.eventName}
+                disabled
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Service Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={assignData.serviceName}
+                disabled
+              />
+            </div>
+          </div>
+
           <div className="mb-3">
-            <label className="form-label">Event Name</label>
-            <input
-              type="text"
-              className="form-control"
-              value={assignData.eventName}
-              disabled
+            <label className="form-label">Select Specialization</label>
+            <Select
+              options={specializationOptions}
+              value={
+                specializationOptions.find(
+                  (opt) => opt.value === assignData.taskType
+                ) || null
+              }
+              onChange={async (selected) => {
+                if (selected) {
+                  // set both value and label for clarity
+                  setAssignData((prev) => ({
+                    ...prev,
+                    taskType: selected.value,
+                    vendorId: "",
+                  }));
+                  // fetch vendors using readable name (label)
+                  await fetchVendorsBySpecialization(selected.label);
+                } else {
+                  // clear when specialization is removed
+                  setAssignData((prev) => ({
+                    ...prev,
+                    taskType: "",
+                    vendorId: "",
+                  }));
+                  setVendors([]);
+                }
+              }}
+              placeholder="Select Specialization"
+              isClearable
             />
           </div>
 
           <div className="mb-3">
             <label className="form-label">Select Vendor</label>
             <Select
-              options={vendorOptions}
+              options={vendors.map((v) => ({
+                value: v._id,
+                label: v.name,
+              }))}
               value={
-                vendorOptions.find(
-                  (opt) => opt.value === assignData.vendorId
-                ) || null
+                vendors
+                  .map((v) => ({ value: v._id, label: v.name }))
+                  .find((opt) => opt.value === assignData.vendorId) || null
               }
               onChange={(selected) =>
                 setAssignData((prev) => ({
@@ -1066,82 +1185,59 @@ const PostProductionDetail = () => {
                   vendorId: selected?.value || "",
                 }))
               }
-              placeholder="Select Vendor"
+              placeholder={
+                assignData.taskType
+                  ? vendors.length
+                    ? "Select Vendor"
+                    : "No vendors found"
+                  : "Select specialization first"
+              }
               isClearable
+              isDisabled={!assignData.taskType}
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">Task Type</label>
-            <select
-              className="form-control"
-              value={assignData.taskType}
-              onChange={(e) =>
-                setAssignData((prev) => ({
-                  ...prev,
-                  taskType: e.target.value,
-                }))
-              }
-            >
-              <option value="">Select Task Type</option>
-              {selectedUnit?.noOfPhotos > 0 && (
-                <option value="PhotoSorting">Photo Sorting</option>
-              )}
-              {selectedUnit?.noOfVideos > 0 && (
-                <option value="VideoConversion">Video Conversion</option>
-              )}
-              {selectedUnit?.noOfPhotos > 0 && selectedUnit?.noOfVideos > 0 && (
-                <option value="Both">
-                  Both Photo Sorting & Video Conversion
-                </option>
-              )}
-            </select>
-          </div>
-
           {/* Dynamic Fields based on available media and selected task type */}
-          {(assignData.taskType === "PhotoSorting" ||
-            assignData.taskType === "Both") &&
-            selectedUnit?.noOfPhotos > 0 && (
-              <div className="mb-3">
-                <label className="form-label">
-                  No. of Photos to sort
-                  <small className="text-muted ms-2">
-                    (Max: {selectedUnit?.noOfPhotos} available)
-                  </small>
-                </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={assignData.photosCount}
-                  onChange={(e) => handlePhotoCountChange(e.target.value)}
-                  min="0"
-                  max={selectedUnit?.noOfPhotos}
-                  placeholder={`Enter photos to sort (max ${selectedUnit?.noOfPhotos})`}
-                />
-              </div>
-            )}
 
-          {(assignData.taskType === "VideoConversion" ||
-            assignData.taskType === "Both") &&
-            selectedUnit?.noOfVideos > 0 && (
-              <div className="mb-3">
-                <label className="form-label">
-                  No. of Videos to convert
-                  <small className="text-muted ms-2">
-                    (Max: {selectedUnit?.noOfVideos} available)
-                  </small>
-                </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={assignData.videosCount}
-                  onChange={(e) => handleVideoCountChange(e.target.value)}
-                  min="0"
-                  max={selectedUnit?.noOfVideos}
-                  placeholder={`Enter videos to convert (max ${selectedUnit?.noOfVideos})`}
-                />
-              </div>
-            )}
+          {selectedUnit?.noOfPhotos > 0 && (
+            <div className="mb-3">
+              <label className="form-label">
+                No. of Photos to sort
+                <small className="text-muted ms-2">
+                  (Collected: {selectedUnit?.noOfPhotos} available)
+                </small>
+              </label>
+              <input
+                type="number"
+                className="form-control"
+                value={assignData.photosCount}
+                onChange={(e) => handlePhotoCountChange(e.target.value)}
+                min="0"
+                max={selectedUnit?.noOfPhotos}
+                placeholder={`Enter photos to sort (max ${selectedUnit?.noOfPhotos})`}
+              />
+            </div>
+          )}
+
+          {selectedUnit?.noOfVideos > 0 && (
+            <div className="mb-3">
+              <label className="form-label">
+                No. of Videos to convert
+                <small className="text-muted ms-2">
+                  (Max: {selectedUnit?.noOfVideos} available)
+                </small>
+              </label>
+              <input
+                type="number"
+                className="form-control"
+                value={assignData.videosCount}
+                onChange={(e) => handleVideoCountChange(e.target.value)}
+                min="0"
+                max={selectedUnit?.noOfVideos}
+                placeholder={`Enter videos to convert (max ${selectedUnit?.noOfVideos})`}
+              />
+            </div>
+          )}
 
           <div className="mb-3">
             <label className="form-label">Task Description</label>
@@ -1225,7 +1321,6 @@ const PostProductionDetail = () => {
                       submittedPhotos: e.target.value,
                     }))
                   }
-                  disabled
                 />
               </div>
 
@@ -1241,24 +1336,8 @@ const PostProductionDetail = () => {
                       submittedVideos: e.target.value,
                     }))
                   }
-                  disabled
                 />
               </div>
-              {/* <div className="mb-3">
-                <label className="form-label">Submitted Photos Count</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={submitData.submittedPhotos}
-                  onChange={(e) =>
-                    setSubmitData((prev) => ({
-                      ...prev,
-                      submittedPhotos: e.target.value,
-                    }))
-                  }
-                  disabled
-                />
-              </div> */}
 
               <div className="mb-3">
                 <label className="form-label">Submission Date</label>
@@ -1313,7 +1392,7 @@ const PostProductionDetail = () => {
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title>Task Details</Modal.Title>
+          <Modal.Title>Sorting Task Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedTask ? (
@@ -1321,9 +1400,6 @@ const PostProductionDetail = () => {
               <div className="row mb-3">
                 <div className="col-md-6">
                   <strong>Vendor:</strong> {selectedTask.vendorName}
-                </div>
-                <div className="col-md-6">
-                  <strong>Task Type:</strong> {selectedTask.taskType}
                 </div>
               </div>
 

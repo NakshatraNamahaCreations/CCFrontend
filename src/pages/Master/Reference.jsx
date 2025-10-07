@@ -14,6 +14,7 @@ import axios from "axios";
 import editIcon from "../../assets/icons/editIcon.png";
 import deleteIcon from "../../assets/icons/deleteIcon.png";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const Reference = () => {
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +32,7 @@ const Reference = () => {
   const [searchInput, setSearchInput] = useState("");
 
   // Base URL for API
-  const API_URL = "http://localhost:5000/api/reference";
+  // const API_URL = `${API_URL}/reference`;
 
   // Fetch references on mount, page, or search change
   useEffect(() => {
@@ -43,7 +44,7 @@ const Reference = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
+        `${API_URL}/reference?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
           searchValue
         )}`
       );
@@ -67,7 +68,7 @@ const Reference = () => {
     setLoading(true);
     try {
       if (editingId) {
-        const response = await axios.put(`${API_URL}/${editingId}`, {
+        const response = await axios.put(`${API_URL}/reference/${editingId}`, {
           name: newReference,
         });
         setReferences(
@@ -76,7 +77,7 @@ const Reference = () => {
           )
         );
       } else {
-        await axios.post(API_URL, { name: newReference });
+        await axios.post(`${API_URL}/reference`, { name: newReference });
         fetchReferences(currentPage, search);
       }
       setShowModal(false);
@@ -102,7 +103,7 @@ const Reference = () => {
   const handleDeleteReference = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${API_URL}/reference/${id}`);
       // If last item on page is deleted, go to previous page if needed
       if (references.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -122,7 +123,7 @@ const Reference = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API_URL}?page=1&limit=10000&search=${encodeURIComponent(search)}`
+        `${API_URL}/reference?page=1&limit=10000&search=${encodeURIComponent(search)}`
       );
       const allReferences = response.data.data;
       const ws = XLSX.utils.aoa_to_sheet([

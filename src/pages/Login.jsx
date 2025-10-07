@@ -247,6 +247,7 @@ import { Form, Button, Container, Row, Col, Image } from "react-bootstrap";
 import logo from "../assets/icons/logo.png";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_URL } from "../utils/api";
 
 const Login = ({ handleLogin }) => {
   const navigate = useNavigate();
@@ -259,7 +260,7 @@ const Login = ({ handleLogin }) => {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:5000/api/admin/login", {
+      const response = await axios.post(`${API_URL}/admin/login`, {
         emailOrUsername,
         password,
       });

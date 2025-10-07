@@ -154,6 +154,7 @@ import Calendar from "react-calendar";
 import axios from "axios";
 import dayjs from "dayjs";
 import { FiChevronRight } from "react-icons/fi";
+import { API_URL } from "../utils/api";
 
 const Booking = () => {
   const navigate = useNavigate();
@@ -192,7 +193,7 @@ const Booking = () => {
   const fetchTodayEvents = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/quotations/booked-events-today"
+      `${API_URL}/quotations/booked-events-today`
       );
       setEvents(res.data.quotations || []);
     } catch (err) {
@@ -203,7 +204,7 @@ const Booking = () => {
   const fetchEventsByDate = async (dateStr) => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/quotations/booked-events-by-date/${dateStr}`
+        `${API_URL}/quotations/booked-events-by-date/${dateStr}`
       );
       setEvents(res.data.quotations || []);
     } catch (err) {

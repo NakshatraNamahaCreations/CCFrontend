@@ -305,6 +305,7 @@ import { Button, Form, Table } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const formatDateTime = (dateString) => {
   const date = new Date(dateString);
@@ -349,7 +350,7 @@ const LeadsDetails = () => {
     const fetchDetails = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/lead/lead-details/${leadId}/${queryId}`
+          `${API_URL}/lead/lead-details/${leadId}/${queryId}`
         );
         const fetchedQuery = res.data.data.query;
         setLead(res.data.data.lead);
@@ -390,7 +391,7 @@ const LeadsDetails = () => {
       };
 
       const res = await axios.put(
-        `http://localhost:5000/api/lead/${queryId}/status`,
+        `${API_URL}/lead/${queryId}/status`,
         payload
       );
 

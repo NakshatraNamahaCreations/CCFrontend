@@ -3,6 +3,7 @@ import { Button, Modal, Form, Table, Alert } from 'react-bootstrap';
 import { FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import editIcon from "../../assets/icons/editIcon.png";
 import deleteIcon from "../../assets/icons/deleteIcon.png";
+import { API_URL } from '../../utils/api';
 
 const UserManagement = () => {
     const [showModal, setShowModal] = useState(false);
@@ -27,7 +28,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/api/admin');
+            const response = await fetch(`${API_URL}/admin`);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to fetch users');
@@ -70,7 +71,7 @@ const UserManagement = () => {
         e.preventDefault();
         setLoading(true);
         try {
-          const url = "http://localhost:5000/api/admin/register"; // ✅ corrected path
+          const url = `${API_URL}/admin/register`; // ✅ corrected path
           const method = "POST";
       
           const body = { ...formData };
@@ -104,7 +105,7 @@ const UserManagement = () => {
         if (!ok) return;
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/admin/${userId}`, {
+            const response = await fetch(`${API_URL}/admin/${userId}`, {
                 method: 'DELETE'
             });
             if (!response.ok) {
@@ -123,7 +124,7 @@ const UserManagement = () => {
     const handleToggleActive = async (user) => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/admin/${user._id}/toggle-status`, {
+            const response = await fetch(`${API_URL}/admin/${user._id}/toggle-status`, {
                 method: 'PATCH'
             });
             if (!response.ok) {

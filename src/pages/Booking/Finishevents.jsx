@@ -6,6 +6,7 @@ import filterIcon from "../../assets/icons/filter.png";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const FinishedEvents = () => {
   const navigate = useNavigate();
@@ -16,8 +17,8 @@ const FinishedEvents = () => {
     const fetchFinishedEvents = async () => {
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:5000/api/quotations/status/Completed");
-        console.log("Raw data from /api/quotations/status/Completed:", response.data);
+        const response = await axios.get(`${API_URL}/quotations/status/Completed`);
+       
 
         if (response.data.success) {
           // Transform the API data to match your component's expected structure

@@ -7,6 +7,7 @@ import { IoSearch } from "react-icons/io5";
 import sortIcon from "../../assets/icons/sort.png";
 import filterIcon from "../../assets/icons/filter.png";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const QuotationPage = () => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const QuotationPage = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/quotations/finalized?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(searchValue)}`
+        `${API_URL}/quotations/finalized?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(searchValue)}`
       );
       setQuotations(response.data.quotations || []);
       setTotalPages(response.data.totalPages || 1);

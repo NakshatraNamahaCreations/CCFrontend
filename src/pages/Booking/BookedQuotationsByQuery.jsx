@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { API_URL } from "../../utils/api";
 
 const BookedQuotationsByQuery = () => {
   const { queryId } = useParams();
@@ -15,7 +16,7 @@ const BookedQuotationsByQuery = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:5000/api/quotations/booked-by-query/${queryId}`
+          `${API_URL}/quotations/booked-by-query/${queryId}`
         );
 
         if (response.data.success) {

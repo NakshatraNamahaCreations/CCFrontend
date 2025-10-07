@@ -12,6 +12,7 @@ import DynamicPagination from "../DynamicPagination";
 // import { exportToExcel, formatVendorDataForExcel } from "../../utils/excelExport"; // Adjust path as needed
 
 import * as XLSX from 'xlsx';
+import { API_URL } from "../../utils/api";
 
 export const exportToExcel = (data, fileName = 'export') => {
   // Create a new workbook
@@ -52,7 +53,7 @@ const AssignedVendor = () => {
   useEffect(() => {
     const fetchVendorInventory = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/vendor-inventory");
+        const res = await axios.get(`${API_URL}/vendor-inventory`);
         if (res.data.success) {
           setVendorAssignments(res.data.data);
           setFilteredAssignments(res.data.data);
@@ -128,7 +129,7 @@ const AssignedVendor = () => {
   const handleDeleteVendor = async (assignment) => {
     if (window.confirm(`Are you sure you want to remove ${assignment.vendorName} from ${assignment.date} (${assignment.slot})?`)) {
       try {
-        const res = await axios.delete(`http://localhost:5000/api/vendor-inventory/${assignment._id}`);
+        const res = await axios.delete(`${API_URL}/vendor-inventory/${assignment._id}`);
         if (res.data.success) {
           toast.success("Vendor assignment removed successfully");
           setVendorAssignments(prev => prev.filter(a => a._id !== assignment._id));

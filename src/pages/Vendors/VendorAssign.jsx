@@ -375,6 +375,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import dayjs from "dayjs";
 import Select from "react-select";
+import { API_URL } from "../../utils/api";
 
 const VendorAssign = () => {
   const { quotationId, packageId } = useParams();
@@ -398,7 +399,7 @@ const VendorAssign = () => {
     const fetchQuotation = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/quotations/${quotationId}`
+          `${API_URL}/quotations/${quotationId}`
         );
         if (res.data?.success && Array.isArray(res.data.quotation?.packages)) {
           const pkg = res.data.quotation.packages.find(
@@ -454,7 +455,7 @@ const VendorAssign = () => {
       setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+          `${API_URL}/vendors/service-name/${encodeURIComponent(
             serviceName
           )}?startDate=${pkg.eventStartDate}&endDate=${pkg.eventEndDate}&slot=${pkg.slot}`
         );
@@ -505,7 +506,7 @@ const VendorAssign = () => {
 
     try {
       await axios.put(
-        `http://localhost:5000/api/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`,
+        `${API_URL}/quotations/${quotationId}/package/${packageId}/service/${serviceId}/unit/${unitIndex}/assign-assistant`,
         {
           assistantId,
           assistantName,
@@ -547,7 +548,7 @@ const VendorAssign = () => {
         setAssistantLoadingMap((m) => ({ ...m, [serviceName]: true }));
         try {
           const res = await axios.get(
-            `http://localhost:5000/api/vendors/service-name/${encodeURIComponent(
+            `${API_URL}/vendors/service-name/${encodeURIComponent(
               serviceName
             )}?startDate=${pkg.eventStartDate}&endDate=${pkg.eventEndDate}&slot=${pkg.slot}`
           );

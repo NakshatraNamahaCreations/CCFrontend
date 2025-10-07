@@ -271,6 +271,7 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 import DynamicPagination from "../DynamicPagination";
 import * as XLSX from "xlsx"; // Import the xlsx library
+import { API_URL } from "../../utils/api";
 
 const PresetQuotation = () => {
   const [showModal, setShowModal] = useState(false);
@@ -294,7 +295,7 @@ const PresetQuotation = () => {
   const loadPresetQuotations = async (page = 1, searchValue = "") => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/preset-quotation?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
+        `${API_URL}/preset-quotation?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
           searchValue
         )}`
       );
@@ -310,7 +311,7 @@ const PresetQuotation = () => {
   const handleDelete = async (id) => {
     try {
       const presetToDelete = presetQuotations.find((p) => p._id === id);
-      await axios.delete(`http://localhost:5000/api/preset-quotation/${id}`);
+      await axios.delete(`${API_URL}/preset-quotation/${id}`);
       // If last item on page is deleted, go to previous page if needed
       if (presetQuotations.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -350,7 +351,7 @@ const PresetQuotation = () => {
     try {
       // Fetch all data without pagination
       const response = await axios.get(
-        `http://localhost:5000/api/preset-quotation?search=${encodeURIComponent(
+        `${API_URL}/preset-quotation?search=${encodeURIComponent(
           search
         )}`
       );

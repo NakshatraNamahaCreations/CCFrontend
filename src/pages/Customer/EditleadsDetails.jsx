@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Select from "react-select";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const EditleadsDetails = () => {
   const { leadId, queryId } = useParams();
@@ -20,7 +21,7 @@ const EditleadsDetails = () => {
     const fetchDetails = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/lead/lead-query-details/${leadId}/${queryId}`
+          `${API_URL}/lead/lead-query-details/${leadId}/${queryId}`
         );
         setPersons(res.data.lead.persons || []);
         setExistingEvents(res.data.lead.queryDetails?.eventDetails || []);
@@ -32,7 +33,7 @@ const EditleadsDetails = () => {
 
     const fetchCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/category/all");
+        const res = await axios.get(`${API_URL}/category/all`);
         setCategories(res.data.data || []);
       } catch {
         toast.error("Failed to fetch categories");
@@ -111,7 +112,7 @@ const EditleadsDetails = () => {
     setShowConfirm(false);
     try {
       await axios.put(
-        `http://localhost:5000/api/lead/${leadId}/update-query/${queryId}`,
+        `${API_URL}/lead/${leadId}/update-query/${queryId}`,
         {
           newPersons,
           updatedEventDetails: existingEvents,

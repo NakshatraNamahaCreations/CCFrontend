@@ -7,6 +7,7 @@ import filterIcon from "../../assets/icons/filter.png";
 import updownarrow from "../../assets/icons/updownarrow.png";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const Inventory = () => {
   useEffect(() => {
     const fetchInventories = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/inventory");
+        const response = await axios.get(`${API_URL}/inventory`);
         if (response.data.success) {
           setInventoryList(response.data.data);
           setFilteredInventory(response.data.data);

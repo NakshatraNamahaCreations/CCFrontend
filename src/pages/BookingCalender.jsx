@@ -7,6 +7,7 @@ import { Container, Card, Table, Tabs, Tab, Form, InputGroup, Button, Spinner, B
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import DynamicPagination from "./DynamicPagination";
+import { API_URL } from "../utils/api";
 
 const localizer = dayjsLocalizer(dayjs);
 
@@ -34,7 +35,7 @@ const BookingCalendar = () => {
       try {
         setLoading(prev => ({ ...prev, calendar: true }));
         const response = await axios.get(
-          "http://localhost:5000/api/quotations/status/Booked"
+          `${API_URL}/quotations/status/Booked`
         );
 
         if (response.data.success) {
@@ -77,7 +78,7 @@ const BookingCalendar = () => {
       try {
         setLoading(prev => ({ ...prev, bookings: true }));
         const response = await axios.get(
-          `http://localhost:5000/api/quotations/booked-completed`,
+          `${API_URL}/quotations/booked-completed`,
           {
             params: {
               page: currentPage,

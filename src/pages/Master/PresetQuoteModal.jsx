@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Table, Col } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { API_URL } from "../../utils/api";
 
 const PresetQuoteModal = ({ show, onHide, onSave, preset }) => {
   const [categories, setCategories] = useState([]);
@@ -21,7 +22,7 @@ const PresetQuoteModal = ({ show, onHide, onSave, preset }) => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/api/category/all");
+      const response = await axios.get(`${API_URL}/category/all`);
       setCategories(response.data.data);
       setError("");
     } catch (err) {
@@ -39,7 +40,7 @@ const PresetQuoteModal = ({ show, onHide, onSave, preset }) => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/api/service/all");
+      const response = await axios.get(`${API_URL}/service/all`);
       const fetchedServices = response.data.data.map((svc) => ({
         _id: svc._id,
         serviceName: svc.name,
@@ -225,13 +226,13 @@ const PresetQuoteModal = ({ show, onHide, onSave, preset }) => {
     try {
       if (preset) {
         await axios.put(
-          `http://localhost:5000/api/preset-quotation/${preset._id}`,
+          `${API_URL}/preset-quotation/${preset._id}`,
           presetPackage
         );
         toast.success(`Updated preset for ${selectedCategory}`);
       } else {
         await axios.post(
-          "http://localhost:5000/api/preset-quotation",
+          `${API_URL}/preset-quotation`,
           presetPackage
         );
         toast.success(`Created new preset for ${selectedCategory}`);

@@ -6,6 +6,7 @@ import { IoSearch } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URL } from "../../utils/api";
 
 const AddMaintenance = () => {
   const [showModal, setShowModal] = useState(false);
@@ -30,7 +31,7 @@ const AddMaintenance = () => {
   useEffect(() => {
     const fetchInventory = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/inventory");
+        const response = await axios.get(`${API_URL}/inventory`);
         if (response.data.success) {
           setInventoryList(response.data.data);
           setFilteredList(response.data.data);
@@ -83,7 +84,7 @@ const AddMaintenance = () => {
         throw new Error("Issue, Damaged By, Send Date, and Status are required");
       }
 
-      const response = await axios.post("http://localhost:5000/api/inventory/maintenance", {
+      const response = await axios.post(`${API_URL}/inventory/maintenance`, {
         inventoryId: selectedInventory.id,
         equipmentName: selectedInventory.equipmentName, // Changed from 'name' to 'equipmentName'
         model: selectedInventory.model || "Unknown",

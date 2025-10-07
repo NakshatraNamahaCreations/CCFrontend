@@ -44,7 +44,7 @@ const FinalQuotationPage = () => {
   useEffect(() => {
     const fetchCustomer = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/customer/${id}`);
+        const response = await fetch(`${API_URL}/customer/${id}`);
         const data = await response.json();
         if (data?.data) {
           setCustomer(data.data);

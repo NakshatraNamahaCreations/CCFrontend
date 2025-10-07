@@ -14,6 +14,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import DynamicPagination from "../DynamicPagination";
 import { FaDownload } from "react-icons/fa";
+import { API_URL } from "../../utils/api";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -43,7 +44,7 @@ const Newleads = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/lead/paginated?page=${page}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
+        `${API_URL}/lead/paginated?page=${page}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
           searchValue
         )}&status=${encodeURIComponent(
           statusFilter
@@ -67,7 +68,7 @@ const Newleads = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/lead/event-date/${date}`
+        `${API_URL}/lead/event-date/${date}`
       );
 
       const leads = response.data.leads || [];

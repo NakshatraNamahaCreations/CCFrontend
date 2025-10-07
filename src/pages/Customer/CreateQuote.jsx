@@ -28,6 +28,7 @@ import LocalAddAlbumModal from "../Albums/LocalAddAlbumModal";
 import LocalAlbumsTable from "../Albums/LocalAlbumsTable";
 import LocalAlbumDetailsModal from "../Albums/LocalAlbumDetailsModal";
 import { computeAlbumTotal } from "../../utils/albumUtils"; // you already use this elsewhere
+import { API_URL } from "../../utils/api";
 
 // Utility function to format date as DD-MM-YYYY
 const formatDate = (dateStr) => {
@@ -306,7 +307,7 @@ const CreateQuote = () => {
     const fetchDetails = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/lead/lead-query-details/${leadId}/${queryId}`
+          `${API_URL}/lead/lead-query-details/${leadId}/${queryId}`
         );
         setLeadDetails(res.data.lead || null);
       } catch (err) {
@@ -318,7 +319,7 @@ const CreateQuote = () => {
     const fetchCategories = async () => {
       try {
         const resCategories = await axios.get(
-          "http://localhost:5000/api/category/all"
+          `${API_URL}/category/all`
         );
         setCategoriesList(resCategories.data.data || []);
       } catch {
@@ -329,7 +330,7 @@ const CreateQuote = () => {
     const fetchServices = async () => {
       try {
         const resServices = await axios.get(
-          "http://localhost:5000/api/service/all"
+          `${API_URL}/service/all`
         );
         const data = (resServices.data.data || []).map((service, idx) => ({
           ...service,
@@ -352,7 +353,7 @@ const CreateQuote = () => {
     const fetchPresetQuotations = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/preset-quotation"
+          `${API_URL}/preset-quotation`
         );
         setPresetData(res.data.data || []);
       } catch (err) {
@@ -373,7 +374,7 @@ const CreateQuote = () => {
     try {
       setNoQuotationsFound(false);
       const res = await axios.get(
-        `http://localhost:5000/api/quotations/by-query/${queryId}`
+        `${API_URL}/quotations/by-query/${queryId}`
       );
       if (
         res.data.success === false &&
@@ -507,7 +508,7 @@ const CreateQuote = () => {
   const handleFinalizeQuotation = async (id) => {
     try {
       const res = await axios.patch(
-        `http://localhost:5000/api/quotations/${id}/finalize`,
+        `${API_URL}/quotations/${id}/finalize`,
         { finalized: true }
       );
       toast.success("Quotation finalized!");
@@ -520,7 +521,7 @@ const CreateQuote = () => {
   const handleUnfinalizeQuotation = async (id) => {
     try {
       const res = await axios.patch(
-        `http://localhost:5000/api/quotations/${id}/finalize`,
+        `${API_URL}/quotations/${id}/finalize`,
         { finalized: false }
       );
       toast.success("Quotation unfinalized!");
@@ -542,7 +543,7 @@ const CreateQuote = () => {
       return;
     try {
       const res = await axios.delete(
-        `http://localhost:5000/api/quotations/${id}`
+        `${API_URL}/quotations/${id}`
       );
       if (res.data.success) {
         toast.success("Quotation deleted successfully");
@@ -597,7 +598,7 @@ const CreateQuote = () => {
     const fetchPresetQuotations = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/preset-quotation"
+          `${API_URL}/preset-quotation`
         );
         setPresetData(res.data.data || []);
       } catch (err) {
@@ -889,7 +890,7 @@ const CreateQuote = () => {
     }
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/quotations/create`,
+        `${API_URL}/quotations/create`,
         {
           leadId: leadId,
           queryId: queryId,
@@ -971,7 +972,7 @@ const CreateQuote = () => {
     }
     try {
       const res = await axios.put(
-        `http://localhost:5000/api/quotations/${currentQuotationId}`,
+        `${API_URL}/quotations/${currentQuotationId}`,
         {
           leadId: leadId,
           queryId: queryId,
@@ -1104,7 +1105,7 @@ const CreateQuote = () => {
     const clonedAlbums = cleanIds(deepClone(quotation.albums || []));
 
     try {
-      await axios.post(`http://localhost:5000/api/quotations/create`, {
+      await axios.post(`${API_URL}/quotations/create`, {
         leadId: quotation.leadId,
         queryId: quotation.queryId,
         quoteTitle: `${quotation.quoteTitle} (Copy)`,

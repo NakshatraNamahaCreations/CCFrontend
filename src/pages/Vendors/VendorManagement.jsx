@@ -316,6 +316,7 @@ import { toast } from "react-hot-toast";
 import DynamicPagination from "../DynamicPagination";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { API_URL } from "../../utils/api";
 
 const VendorManagement = () => {
   const navigate = useNavigate();
@@ -340,7 +341,7 @@ const VendorManagement = () => {
   const fetchVendors = async (page = 1, search = "") => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/vendors", {
+      const res = await axios.get(`${API_URL}/vendors`, {
         params: { page, limit, search },
       });
 
@@ -402,7 +403,7 @@ const VendorManagement = () => {
     if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
         const response = await axios.delete(
-          `http://localhost:5000/api/vendors/${vendorId}`
+          `${API_URL}/vendors/${vendorId}`
         );
         if (response.data.success) {
           toast.success("Vendor deleted successfully");
@@ -420,7 +421,7 @@ const VendorManagement = () => {
   const handleDownloadExcel = async () => {
     setDownloading(true); // show downloading text
     try {
-      const res = await axios.get("http://localhost:5000/api/vendors", {
+      const res = await axios.get(`${API_URL}/vendors`, {
         params: { page: 1, limit: 10000 }, // fetch all vendors (or create a backend endpoint for all)
       });
 

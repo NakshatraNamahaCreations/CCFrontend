@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import axios from "axios";
 import DynamicPagination from "../DynamicPagination";
+import { API_URL } from "../../utils/api";
 
 const Complementary = () => {
   const [showModal, setShowModal] = useState(false);
@@ -26,7 +27,7 @@ const Complementary = () => {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
 
-  const API_URL = "http://localhost:5000/api/complementary";
+  const API_URL = `${API_URL}/complementary`;
 
   // Fetch complementary items on mount, page, or search change
   useEffect(() => {

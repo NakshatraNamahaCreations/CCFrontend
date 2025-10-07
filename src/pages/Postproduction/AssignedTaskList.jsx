@@ -17,7 +17,7 @@
 //   const fetchAssignments = async () => {
 //     try {
 //       const res = await axios.get(
-//         `http://localhost:5000/api/task/assignments/${eventId}/${encodeURIComponent(serviceName)}`
+//         `http://localhost:5000/api/sorting-task/assignments/${eventId}/${encodeURIComponent(serviceName)}`
 //       );
 //       if (res.data.success) {
 //         console.log("ass", res.data.assignments);
@@ -127,6 +127,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Table, Card, Badge, Button, Modal, Form } from "react-bootstrap";
 import { FaEye, FaCheck } from "react-icons/fa";
 import dayjs from "dayjs";
+import { API_URL } from "../../utils/api";
 
 const AssignedTaskList = () => {
   const { eventId, serviceName } = useParams();
@@ -150,7 +151,7 @@ const AssignedTaskList = () => {
   const fetchAssignments = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/task/assignments/${eventId}/${encodeURIComponent(serviceName)}`
+        `${API_URL}/sorting-task/assignments/${eventId}/${encodeURIComponent(serviceName)}`
       );
       if (res.data.success) {
         setAssignments(res.data.assignments);
@@ -203,7 +204,7 @@ const AssignedTaskList = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:5000/api/task-submission/submit-vendor-progress",
+        `${API_URL}/task-submission/submit-vendor-progress`,
         payload
       );
 

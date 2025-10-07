@@ -192,7 +192,7 @@ const Customers = () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/lead?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
+        `${API_URL}/lead?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(
           searchValue
         )}`
       );
@@ -220,7 +220,7 @@ const Customers = () => {
   const handleDelete = async (leadId) => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/lead/${leadId}`);
+      await axios.delete(`${API_URL}/lead/${leadId}`);
       setLeads(leads.filter((lead) => lead._id !== leadId));
       toast.success("Lead deleted successfully");
     } catch (err) {
