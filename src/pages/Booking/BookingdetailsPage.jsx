@@ -1851,6 +1851,7 @@ const BookingdetailsPage = () => {
                   checked={collectData.qualityChecked || false}
                   onChange={handleCollectDataChange}
                 />
+                <span className="text-danger">*</span>
               </div>
             </Form>
           </Modal.Body>
