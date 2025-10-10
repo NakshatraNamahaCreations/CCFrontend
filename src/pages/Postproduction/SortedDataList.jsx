@@ -23,8 +23,10 @@ import AssignPhotoEditingModal from "./modals/AssignPhotoEditingModal";
 import AssignVideoEditingModal from "./modals/AssignVideoEditingModal";
 import SubmitEditingTaskModal from "./modals/SubmitEditingTaskModal";
 import ViewEditingTaskModal from "./modals/ViewEditingTaskModal";
+import PhotoSelectionModal from "./modals/PhotoSelectionModal";
+import AssignAlbumEditingModal from "./modals/AssignAlbumEditingModal";
 
-import { FaImages, FaEdit, FaPrint } from "react-icons/fa";
+import { FaImages, FaEdit, FaPrint, FaEye  } from "react-icons/fa";
 
 const SortedDataList = () => {
   const { quotationId } = useParams();
@@ -38,6 +40,11 @@ const SortedDataList = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPhotoAssignModal, setShowPhotoAssignModal] = useState(false);
   const [showVideoAssignModal, setShowVideoAssignModal] = useState(false);
+
+  // NEW: “Submit Selected Photos” modal state
+  const [showSubmitSelectedModal, setShowSubmitSelectedModal] = useState(false);
+  const [albumForSubmit, setAlbumForSubmit] = useState(null);
+  const [selectedPhotosCount, setSelectedPhotosCount] = useState("");
 
   const [assignData, setAssignData] = useState({
     eventName: "",
@@ -60,6 +67,20 @@ const SortedDataList = () => {
   const [photoEditingTasks, setPhotoEditingTasks] = useState([]);
   const [videoEditingTasks, setVideoEditingTasks] = useState([]);
   const [albumStatuses, setAlbumStatuses] = useState({});
+  const [showPhotoSelectionModal, setShowPhotoSelectionModal] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
+
+  const [albumSelectionTasks, setAlbumSelectionTasks] = useState({});
+  const [showAlbumTaskView, setShowAlbumTaskView] = useState(false);
+  const [albumTaskToView, setAlbumTaskToView] = useState(null);
+  const [albumSelectedPhotos, setAlbumSelectedPhotos] = useState({});
+  // state
+  const [showAssignAlbumModal, setShowAssignAlbumModal] = useState(false);
+  const [albumForAssign, setAlbumForAssign] = useState(null);
+  const [albumEditingLatest, setAlbumEditingLatest] = useState({});
+  const [showAlbumEditingView, setShowAlbumEditingView] = useState(false);
+  const [albumEditingToView, setAlbumEditingToView] = useState(null);
+
   const options = [
     {
       value: "Awaiting Customer Selection",
@@ -78,21 +99,102 @@ const SortedDataList = () => {
       label: "Awaiting Printing Approval",
       color: "red",
     },
+    {
+      value: "Sent for Printing",
+      label: "Sent for Printing",
+      color: "red",
+    },
     { value: "Completed", label: "Completed", color: "darkgreen" },
   ];
 
-  const customStyles = {
-    option: (provided, { data, isFocused, isSelected }) => ({
-      ...provided,
-      color: data.color,
-      backgroundColor: isSelected ? "#f5f5f5" : isFocused ? "#fafafa" : "white",
-      fontWeight: isSelected ? "bold" : "normal",
-    }),
-    singleValue: (provided, { data }) => ({
-      ...provided,
-      color: data.color,
-      fontWeight: "bold",
-    }),
+  // NEW: open the “Submit Selected Photos” modal for an album
+  const openSubmitSelectedModal = (album) => {
+    setAlbumForSubmit(album);
+    setSelectedPhotosCount(""); // reset field
+    setShowSubmitSelectedModal(true);
+  };
+
+  // NEW: fetch tasks by album id
+  const fetchAlbumSelectionTask = async (albumId) => {
+    if (!albumId) return;
+    try {
+      const { data } = await axios.get(
+        `${API_URL}/album-photoselection-task/album/${albumId}`
+      );
+      if (data?.success) {
+        setAlbumSelectionTasks((prev) => ({
+          ...prev,
+          [albumId]: {
+            hasTask: data.hasTask,
+            latestTask: data.latestTask,
+            count: data.count,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching album photo selection task:", err);
+    }
+  };
+
+  const fetchAllSelectedForQuotation = async () => {
+    try {
+      const { data } = await axios.get(
+        `${API_URL}/album-photo-selected/quotation/${quotationId}/latest-by-album`
+      );
+      if (data?.success) {
+        setAlbumSelectedPhotos(data.data || {}); // already a map keyed by albumId
+      }
+    } catch (e) {
+      console.error("Failed to fetch selected photos map", e);
+    }
+  };
+
+  const fetchAlbumEditingLatest = async (albumId) => {
+    if (!albumId) return;
+    try {
+      const { data } = await axios.get(
+        `${API_URL}/album-editing/album/${albumId}/latest`
+      );
+      if (data?.success) {
+        setAlbumEditingLatest((prev) => ({
+          ...prev,
+          [albumId]: data.task || null,
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching latest album editing task:", err);
+    }
+  };
+
+  const primeAlbumEditingLatest = async (albums = []) => {
+    try {
+      await Promise.all(albums.map((a) => fetchAlbumEditingLatest(a._id)));
+    } catch (e) {
+      console.error("primeAlbumEditingLatest error:", e);
+    }
+  };
+
+  // ✅ Fetch selected photo info per album
+  const fetchAlbumSelectedPhotos = async (albumId) => {
+    if (!albumId) return;
+    try {
+      const { data } = await axios.get(
+        `${API_URL}/album-photo-selected/album/${albumId}`
+      );
+      if (data?.success && data?.data) {
+        setAlbumSelectedPhotos((prev) => ({
+          ...prev,
+          [albumId]: data.data,
+        }));
+      } else {
+        setAlbumSelectedPhotos((prev) => ({
+          ...prev,
+          [albumId]: null,
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching selected photo info:", err);
+    }
   };
 
   // ----------------------- Fetch Summary -----------------------
@@ -114,6 +216,11 @@ const SortedDataList = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePhotoSelection = (album) => {
+    setSelectedAlbum(album);
+    setShowPhotoSelectionModal(true);
   };
 
   // ----------------------- Fetch Editing Tasks -----------------------
@@ -199,17 +306,156 @@ const SortedDataList = () => {
     }
   };
 
+  // ✅ 1) Use the correct backend route and keep robust error handling
+  const updateAlbumStatus = async (albumId, status) => {
+    try {
+      const { data } = await axios.put(
+        `${API_URL}/quotations/${quotationId}/albums/${albumId}/status`,
+        { status }
+      );
+
+      if (data?.success) {
+        return {
+          ok: true,
+          newStatus: data?.data?.newStatus || status,
+          message: data?.message,
+        };
+      }
+      return {
+        ok: false,
+        message: data?.message || "Failed to update album status",
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update album status",
+      };
+    }
+  };
+
+  // ✅ 2) Plain “select = update” handler with optimistic UI + revert on failure
+  const handleAlbumStatusChange = async (album, selectedStatus) => {
+    const prevStatus = albumStatuses[album._id];
+    setAlbumStatuses((p) => ({ ...p, [album._id]: selectedStatus }));
+
+    const result = await updateAlbumStatus(album._id, selectedStatus);
+
+    if (!result.ok) {
+      setAlbumStatuses((p) => ({ ...p, [album._id]: prevStatus }));
+      toast.error(result.message);
+      return;
+    }
+
+    setAlbumStatuses((p) => ({ ...p, [album._id]: result.newStatus }));
+    toast.success(
+      result.message || `Album status updated to ${result.newStatus}`
+    );
+
+    // NEW: if switched to selection-by-us, check whether a task already exists
+    if (result.newStatus === "Photos To Be Selected By Us") {
+      await fetchAlbumSelectionTask(album._id);
+    }
+  };
+
+  // ----------------------- Handle Photo Selection Complete -----------------------
+  const handlePhotoSelectionComplete = () => {
+    fetchSummary();
+  };
+  // somewhere near other handlers
+  const handleAlbumEditing = (album) => {
+    setAlbumForAssign(album);
+    setShowAssignAlbumModal(true);
+  };
+
+  const handleAssignAlbumTask = async (formPayload) => {
+    // formPayload = { albumId, albumDetails, selectedPhotos, specialization, vendorId, taskDescription }
+    try {
+      const vendorName =
+        vendors.find((v) => v._id === formPayload.vendorId)?.name || "";
+      const payload = {
+        quotationId,
+        ...formPayload,
+        vendorName,
+      };
+
+      const { data } = await axios.post(
+        `${API_URL}/album-editing/assign`,
+        payload
+      );
+
+      if (data?.success) {
+        toast.success("Album editing task assigned!");
+
+        // Optimistic album status flip
+        setAlbumStatuses((p) => ({
+          ...p,
+          [formPayload.albumId]: "In Progress",
+        }));
+
+        // Fetch latest assigned task for this album
+        await fetchAlbumEditingLatest(formPayload.albumId);
+
+        // Pull fresh summary so everything stays in sync
+        await fetchSummary();
+
+        // Close assign modal
+        setShowAssignAlbumModal(false);
+      } else {
+        throw new Error(data?.message || "Failed to assign album editing task");
+      }
+    } catch (err) {
+      console.error("Error assigning album editing task:", err);
+      toast.error(
+        err?.response?.data?.message || "Failed to assign album editing task"
+      );
+    }
+  };
+
   useEffect(() => {
     fetchServices();
   }, []);
 
+  // Merge your two quotationId effects into one
   useEffect(() => {
-    if (quotationId) {
-      fetchSummary();
-      fetchEditingTasks();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!quotationId) return;
+
+    let alive = true; // guard to avoid state updates after unmount/route change
+
+    (async () => {
+      try {
+        await fetchSummary(); // summary first (it drives albumStatuses effect)
+        if (!alive) return;
+
+        await Promise.all([
+          fetchEditingTasks(),
+          fetchAllSelectedForQuotation(), // batched latest-by-album map
+        ]);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [quotationId]);
+
+  // Derive initial album statuses from summary — keep as-is
+  useEffect(() => {
+    if (summary?.quotation?.albums?.length) {
+      const initial = {};
+      summary.quotation.albums.forEach((album) => {
+        initial[album._id] = album.status || "Awaiting Customer Selection";
+      });
+      setAlbumStatuses(initial);
+
+      // NEW: fetch latest album editing tasks for all albums
+      primeAlbumEditingLatest(summary.quotation.albums);
+    }
+  }, [summary]);
 
   // ----------------------- Get Editing Status for Sorted Task -----------------------
   const getEditingStatus = (pkgName, serviceName, isPhotoTask = true) => {
@@ -262,18 +508,6 @@ const SortedDataList = () => {
         };
       });
   }, [summary, photoEditingTasks, videoEditingTasks]);
-
-  // ----------------------- Fetch All Vendors -----------------------
-  const fetchAllVendors = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/vendors`);
-      if (res.data?.success) {
-        setVendors(res.data.data || []);
-      }
-    } catch (err) {
-      console.error("Error fetching vendors:", err);
-    }
-  };
 
   // ----------------------- Open Assign Modal -----------------------
   const handleAssignTaskForEditing = (task, isPhoto = true) => {
@@ -421,21 +655,6 @@ const SortedDataList = () => {
     }
   };
 
-  // ----------------------- Render Editing Status Badge -----------------------
-  const renderEditingStatus = (status) => {
-    const statusConfig = {
-      "Not Assigned": { variant: "secondary", text: "Not Assigned" },
-      Assigned: { variant: "warning", text: "Assigned" },
-      Completed: { variant: "success", text: "Completed" },
-    };
-    const config = statusConfig[status] || statusConfig["Not Assigned"];
-    return (
-      <Badge bg={config.variant} className="fw-normal">
-        {config.text}
-      </Badge>
-    );
-  };
-
   // ----------------------- Render Actions -----------------------
   const renderActions = (task, isPhoto) => {
     if (task.editingStatus === "Not Assigned")
@@ -545,6 +764,80 @@ const SortedDataList = () => {
       a.event.localeCompare(b.event)
     );
   }, [summary, videoEditingTasks]);
+
+  // NEW: submit selected photos for an album
+  const handleSubmitSelectedPhotos = async () => {
+    try {
+      if (!albumForSubmit?._id) {
+        toast.error("No album selected.");
+        return;
+      }
+
+      const n = parseInt(selectedPhotosCount, 10);
+      if (!n || n < 0) {
+        toast.error("Please enter a valid number of selected photos.");
+        return;
+      }
+
+      const basePhotos = albumForSubmit?.snapshot?.basePhotos || 0;
+      if (basePhotos && n > basePhotos) {
+        toast.error(
+          `Selected photos cannot exceed album capacity (${basePhotos}).`
+        );
+        return;
+      }
+
+      const payload = {
+        quotationId,
+        albumId: albumForSubmit._id,
+        albumDetails: {
+          templateLabel: albumForSubmit?.snapshot?.templateLabel || "",
+          baseSheets: albumForSubmit?.snapshot?.baseSheets || 0,
+          basePhotos: basePhotos || 0,
+        },
+        selectedPhotos: n,
+      };
+
+      const { data } = await axios.post(
+        `${API_URL}/album-photo-selected/create`,
+        payload
+      );
+
+      if (data?.success) {
+        // ✅ Optimistic UI: mark this album as "submitted" immediately
+        setAlbumSelectedPhotos((prev) => ({
+          ...prev,
+          [payload.albumId]: data.data || {
+            albumId: payload.albumId,
+            quotationId: payload.quotationId,
+            selectedPhotos: payload.selectedPhotos,
+            albumDetails: payload.albumDetails,
+            createdAt: new Date().toISOString(),
+          },
+        }));
+
+        // (optional) auto-advance status
+        // setAlbumStatuses((p) => ({ ...p, [payload.albumId]: "Awaiting Printing Approval" }));
+
+        toast.success(data.message || "Selected photos submitted!");
+
+        // Close modal & reset
+        setShowSubmitSelectedModal(false);
+        setAlbumForSubmit(null);
+        setSelectedPhotosCount("");
+
+        // (optional) pull fresh server state if you want
+        // await fetchAllSelectedForQuotation();
+      } else {
+        toast.error(data?.message || "Failed to submit selected photos.");
+      }
+    } catch (err) {
+      console.error("Error submitting selected photos:", err);
+      toast.error(
+        err?.response?.data?.message || "Failed to submit selected photos."
+      );
+    }
+  };
 
   // ----------------------- Render -----------------------
   if (loading) {
@@ -659,12 +952,7 @@ const SortedDataList = () => {
                     <td className="text-center">
                       {String(idx + 1).padStart(2, "0")}
                     </td>
-                    <td>
-                      {(a?.snapshot?.templateLabel || "Custom") +
-                        ` (${a?.snapshot?.baseSheets || 0} Sheets, ${
-                          a?.snapshot?.basePhotos || 0
-                        } Photos)`}
-                    </td>
+                    <td>{a?.snapshot?.templateLabel || "Custom"}</td>
                     <td>{a?.snapshot?.boxLabel || "Without Box"}</td>
                     <td className="text-center">{a?.qty || 0}</td>
                     <td className="text-center">
@@ -678,121 +966,208 @@ const SortedDataList = () => {
                         ? `Shared extras: Standard ${a.extras.shared.std}, Special ${a.extras.shared.special}, Embossed ${a.extras.shared.embossed}`
                         : "No extras"}
                     </td>
-                 <td style={{ width: "200px", minWidth: "180px" }}>
-  <Select
-    options={options}
-    placeholder="Update Status"
-    value={options.find((opt) => opt.value === albumStatuses[a._id])}
-    onChange={(selected) =>
-      setAlbumStatuses((prev) => ({
-        ...prev,
-        [a._id]: selected.value,
-      }))
-    }
-    styles={{
-      control: (base, state) => ({
-        ...base,
-        minHeight: "30px",
-        height: "30px",
-        borderColor: state.isFocused ? "#86b7fe" : "#ced4da",
-        boxShadow: state.isFocused ? "0 0 0 0.15rem rgba(13,110,253,.25)" : "",
-        "&:hover": { borderColor: "#86b7fe" },
-        fontSize: "11.5px",
-      }),
-      valueContainer: (base) => ({
-        ...base,
-        padding: "0 6px",
-        whiteSpace: "normal", // ✅ allow full line breaks
-        lineHeight: "1.2",
-      }),
-      singleValue: (base, { data }) => ({
-        ...base,
-        color: data.color,
-        fontWeight: "600",
-        fontSize: "11.5px",
-        whiteSpace: "normal", // ✅ show full text instead of ellipsis
-        overflow: "visible",
-      }),
-      placeholder: (base) => ({
-        ...base,
-        fontSize: "11.5px",
-      }),
-      dropdownIndicator: (base) => ({
-        ...base,
-        padding: "2px 6px",
-      }),
-      option: (base, { data, isFocused, isSelected }) => ({
-        ...base,
-        color: data.color,
-        backgroundColor: isSelected
-          ? "#f5f5f5"
-          : isFocused
-          ? "#fafafa"
-          : "white",
-        fontSize: "11.5px",
-        whiteSpace: "normal",
-      }),
-      menu: (base) => ({
-        ...base,
-        zIndex: 9999,
-        fontSize: "11.5px",
-      }),
-    }}
-    menuPortalTarget={document.body}
-    menuPosition="fixed"
-    menuShouldScrollIntoView={false}
-  />
-</td>
+                    <td style={{ width: "220px", minWidth: "220px" }}>
+                      <div className="d-flex flex-column gap-1">
+                        <Select
+                          options={options}
+                          placeholder="Update Status"
+                          value={options.find(
+                            (opt) => opt.value === albumStatuses[a._id]
+                          )}
+                          onChange={(selected) => {
+                            handleAlbumStatusChange(a, selected.value);
+                          }}
+                          styles={{
+                            control: (base, state) => ({
+                              ...base,
+                              minHeight: "30px",
+                              height: "30px",
+                              borderColor: state.isFocused
+                                ? "#86b7fe"
+                                : "#ced4da",
+                              boxShadow: state.isFocused
+                                ? "0 0 0 0.15rem rgba(13,110,253,.25)"
+                                : "",
+                              "&:hover": { borderColor: "#86b7fe" },
+                              fontSize: "11.5px",
+                            }),
+                            valueContainer: (base) => ({
+                              ...base,
+                              padding: "0 6px",
+                              whiteSpace: "normal",
+                              lineHeight: "1.2",
+                            }),
+                            singleValue: (base, { data }) => ({
+                              ...base,
+                              color: data.color,
+                              fontWeight: "600",
+                              fontSize: "11.5px",
+                              whiteSpace: "normal",
+                              overflow: "visible",
+                            }),
+                            placeholder: (base) => ({
+                              ...base,
+                              fontSize: "11.5px",
+                            }),
+                            dropdownIndicator: (base) => ({
+                              ...base,
+                              padding: "2px 6px",
+                            }),
+                            option: (
+                              base,
+                              { data, isFocused, isSelected }
+                            ) => ({
+                              ...base,
+                              color: data.color,
+                              backgroundColor: isSelected
+                                ? "#f5f5f5"
+                                : isFocused
+                                ? "#fafafa"
+                                : "white",
+                              fontSize: "11.5px",
+                              whiteSpace: "normal",
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              zIndex: 9999,
+                              fontSize: "11.5px",
+                            }),
+                          }}
+                          menuPortalTarget={document.body}
+                          menuPosition="fixed"
+                          menuShouldScrollIntoView={false}
+                        />
+
+                        {/* Buttons under the Select control inside Albums table */}
+                        {albumStatuses[a._id] ===
+                          "Photos To Be Selected By Us" && (
+                          <>
+                            {albumSelectionTasks[a._id]?.hasTask ? (
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                style={{
+                                  fontSize: "11px",
+                                  whiteSpace: "nowrap",
+                                }}
+                                onClick={() => {
+                                  setAlbumTaskToView(
+                                    albumSelectionTasks[a._id].latestTask ||
+                                      null
+                                  );
+                                  setShowAlbumTaskView(true);
+                                }}
+                              >
+                                View Task
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                style={{
+                                  fontSize: "11px",
+                                  whiteSpace: "nowrap",
+                                }}
+                                onClick={() => handlePhotoSelection(a)}
+                              >
+                                Photo Selection
+                              </Button>
+                            )}
+                          </>
+                        )}
+
+                        {albumStatuses[a._id] === "Selection Ready" && (
+                          <>
+                            {albumSelectedPhotos[a._id] ? (
+                              <Badge bg="success" style={{ fontSize: "11px" }}>
+                                Photos Submitted (
+                                {albumSelectedPhotos[a._id]?.selectedPhotos ||
+                                  0}
+                                )
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                style={{
+                                  fontSize: "11px",
+                                  whiteSpace: "nowrap",
+                                }}
+                                onClick={() => openSubmitSelectedModal(a)}
+                              >
+                                Submit Selected Photos
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
 
                     <td className="text-center">
                       <div className="d-flex justify-content-center gap-2">
-                        {/* 🖼️ Select Photos */}
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Tooltip id="tooltip-select">Select Photos</Tooltip>
-                          }
-                        >
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            className="rounded-circle"
+                        {albumStatuses[a._id] === "Selection Ready" && (
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id="tooltip-edit">Album Editing</Tooltip>
+                            }
                           >
-                            <FaImages />
-                          </Button>
-                        </OverlayTrigger>
+                            <Button
+                              variant="outline-success"
+                              size="sm"
+                              className="rounded-circle"
+                              onClick={() => handleAlbumEditing(a)}
+                            >
+                              <FaEdit />
+                            </Button>
+                          </OverlayTrigger>
+                        )}
 
-                        {/* ✏️ Album Editing */}
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Tooltip id="tooltip-edit">Album Editing</Tooltip>
-                          }
-                        >
-                          <Button
-                            variant="outline-success"
-                            size="sm"
-                            className="rounded-circle"
+                        {/* View Album Editing Task (when a latest task exists) */}
+                        {albumEditingLatest[a._id] && (
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id={`tooltip-album-view-${a._id}`}>
+                                View Editing Task
+                              </Tooltip>
+                            }
                           >
-                            <FaEdit />
-                          </Button>
-                        </OverlayTrigger>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              className="rounded-circle"
+                              onClick={() => {
+                                setAlbumEditingToView(
+                                  albumEditingLatest[a._id]
+                                );
+                                setShowAlbumEditingView(true);
+                              }}
+                            >
+                              <FaEye />
+                            </Button>
+                          </OverlayTrigger>
+                        )}
 
-                        {/* 🖨️ Album Printing */}
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Tooltip id="tooltip-print">Album Printing</Tooltip>
-                          }
-                        >
-                          <Button
-                            variant="outline-warning"
-                            size="sm"
-                            className="rounded-circle"
+                        {/* {albumStatuses[a._id] ===
+                          "Awaiting Printing Approval" && (
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip id="tooltip-print">
+                                Album Printing
+                              </Tooltip>
+                            }
                           >
-                            <FaPrint />
-                          </Button>
-                        </OverlayTrigger>
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              className="rounded-circle"
+                            >
+                              <FaPrint />
+                            </Button>
+                          </OverlayTrigger>
+                        )} */}
                       </div>
                     </td>
                   </tr>
@@ -802,6 +1177,37 @@ const SortedDataList = () => {
           </Card.Body>
         </Card>
       )}
+
+      {/* ✅ Photo Selection Modal */}
+      <PhotoSelectionModal
+        show={showPhotoSelectionModal}
+        onClose={() => setShowPhotoSelectionModal(false)}
+        album={selectedAlbum}
+        totalSortedPhotos={summary?.totalSortedPhotos || 0}
+        quotationId={quotationId}
+        onStatusUpdate={handlePhotoSelectionComplete}
+        onAssigned={async () => {
+          // After creating a task, refresh cache so the button flips to “View Task”
+          if (selectedAlbum?._id) {
+            await fetchAlbumSelectionTask(selectedAlbum._id);
+          }
+        }}
+      />
+
+      <AssignAlbumEditingModal
+        show={showAssignAlbumModal}
+        onClose={() => setShowAssignAlbumModal(false)}
+        album={albumForAssign}
+        selectedPhotos={
+          albumForAssign
+            ? albumSelectedPhotos[albumForAssign._id]?.selectedPhotos || 0
+            : 0
+        }
+        specializationOptions={specializationOptions}
+        vendors={vendors}
+        fetchVendorsBySpecialization={fetchVendorsBySpecialization}
+        onAssign={handleAssignAlbumTask}
+      />
 
       {/* ✅ Photo Table */}
       <Card className="shadow-sm mb-4">
@@ -959,6 +1365,161 @@ const SortedDataList = () => {
         onClose={() => setShowViewModal(false)}
         selectedSortedTask={selectedSortedTask}
       />
+
+      {/* View Album Photo-Selection Task */}
+      <Modal
+        show={showAlbumTaskView}
+        onHide={() => setShowAlbumTaskView(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Album Photo Selection Task</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ fontSize: "13px" }}>
+          {albumTaskToView ? (
+            <>
+              <div>
+                <strong>Vendor:</strong> {albumTaskToView.vendorName}
+              </div>
+              <div>
+                <strong>Assigned Date:</strong>{" "}
+                {dayjs(albumTaskToView.assignedDate).format("YYYY-MM-DD")}
+              </div>
+              <div>
+                <strong>Photos To Select:</strong>{" "}
+                {albumTaskToView.photosToSelect}
+              </div>
+              {albumTaskToView.taskDescription && (
+                <div className="mt-2">
+                  <strong>Notes:</strong> {albumTaskToView.taskDescription}
+                </div>
+              )}
+            </>
+          ) : (
+            <Alert variant="warning" className="mb-0">
+              No task found.
+            </Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowAlbumTaskView(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* ✅ Submit Selected Photos Modal */}
+      <Modal
+        show={showSubmitSelectedModal}
+        onHide={() => setShowSubmitSelectedModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Submit Selected Photos for Album</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ fontSize: "13px" }}>
+          {albumForSubmit ? (
+            <>
+              <div className="mb-2">
+                <strong>Album:</strong>{" "}
+                {albumForSubmit?.snapshot?.templateLabel || "—"}
+              </div>
+              <div className="mb-3">
+                <strong>Album Capacity:</strong>{" "}
+                {(albumForSubmit?.snapshot?.basePhotos || 0).toLocaleString()}{" "}
+                photos
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Selected Photos *</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="0"
+                  max={albumForSubmit?.snapshot?.basePhotos || undefined}
+                  value={selectedPhotosCount}
+                  onChange={(e) => setSelectedPhotosCount(e.target.value)}
+                  placeholder={`Max: ${(
+                    albumForSubmit?.snapshot?.basePhotos || 0
+                  ).toString()}`}
+                />
+                <div className="form-text">
+                  Enter how many photos are finalized for this album.
+                </div>
+              </div>
+            </>
+          ) : (
+            <Alert variant="warning" className="mb-0">
+              No album selected.
+            </Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowSubmitSelectedModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmitSelectedPhotos}
+            disabled={!albumForSubmit}
+          >
+            Submit
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showAlbumEditingView}
+        onHide={() => setShowAlbumEditingView(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Album Editing Task</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ fontSize: "13px" }}>
+          {albumEditingToView ? (
+            <>
+              <div>
+                <strong>Vendor:</strong> {albumEditingToView.vendorName || "—"}
+              </div>
+              <div>
+                <strong>Status:</strong>{" "}
+                {albumEditingToView.status || "Assigned"}
+              </div>
+              <div>
+                <strong>Assigned Date:</strong>{" "}
+                {albumEditingToView.assignedDate
+                  ? dayjs(albumEditingToView.assignedDate).format("YYYY-MM-DD")
+                  : "—"}
+              </div>
+              <div>
+                <strong>Selected Photos:</strong>{" "}
+                {albumEditingToView.selectedPhotos ?? 0}
+              </div>
+              {albumEditingToView.taskDescription && (
+                <div className="mt-2">
+                  <strong>Notes:</strong> {albumEditingToView.taskDescription}
+                </div>
+              )}
+            </>
+          ) : (
+            <Alert variant="warning" className="mb-0">
+              No task found.
+            </Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowAlbumEditingView(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };
