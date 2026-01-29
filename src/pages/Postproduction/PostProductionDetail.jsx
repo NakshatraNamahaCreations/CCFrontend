@@ -29,6 +29,72 @@ import {
 } from "react-icons/fa";
 import { API_URL } from "../../utils/api";
 
+const normalizeDateOnly = (d) => {
+  if (!d) return null;
+  // if backend sends ISO or date string, dayjs handles both
+  return dayjs(d).startOf("day");
+};
+
+const isLateSubmission = (task) => {
+  const submitted = normalizeDateOnly(task?.submittedDate);
+  const deadline = normalizeDateOnly(task?.completionDate);
+  if (!submitted || !deadline) return false;
+  return submitted.isAfter(deadline, "day");
+};
+
+const lateByText = (task) => {
+  const submitted = normalizeDateOnly(task?.submittedDate);
+  const deadline = normalizeDateOnly(task?.completionDate);
+  if (!submitted || !deadline) return "";
+  const days = submitted.diff(deadline, "day");
+  if (days <= 0) return "0 days";
+  return days === 1 ? "1 day late" : `${days} days late`;
+};
+
+const renderSubmissionIndicator = (task) => {
+  const submitted = task?.submittedDate;
+  const deadline = task?.completionDate;
+
+  // show only when both dates exist AND task is completed
+  if (!submitted || !deadline || task?.status !== "Completed") return null;
+
+  const late = isLateSubmission(task);
+
+  return (
+    <div
+      className={`my-3 d-flex align-items-center justify-content-between px-3 py-2 rounded border ${
+        late
+          ? "border-danger bg-danger-subtle"
+          : "border-success bg-success-subtle"
+      }`}
+    >
+      <div className="d-flex align-items-center gap-2 ">
+        <span
+          className={`d-inline-flex align-items-center justify-content-center rounded-circle ${
+            late ? "bg-danger text-white" : "bg-success text-white"
+          }`}
+          style={{ width: 28, height: 28, fontSize: 14 }}
+        >
+          {late ? "!" : "✓"}
+        </span>
+
+        <div style={{ lineHeight: 1.2 }}>
+          <div className="fw-bold" style={{ fontSize: 14 }}>
+            {late ? "Late Submission" : "Submitted On Time"}
+          </div>
+          <div className="text-muted" style={{ fontSize: 12 }}>
+            {late ? lateByText(task) : "Within deadline"}
+          </div>
+        </div>
+      </div>
+
+      <span className={`badge ${late ? "text-bg-danger" : "text-bg-success"}`}>
+        {late ? "LATE" : "ON TIME"}
+      </span>
+    </div>
+  );
+};
+
 const PostProductionDetail = () => {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -80,7 +146,7 @@ const PostProductionDetail = () => {
       setMarking(true);
       const res = await axios.put(
         `${API_URL}/quotations/${quotationId}/booking-status`,
-        { status: "Completed" }
+        { status: "Completed" },
       );
       if (res.data?.success) {
         setQuotation((q) => ({ ...q, bookingStatus: "Completed" }));
@@ -93,7 +159,7 @@ const PostProductionDetail = () => {
       alert(
         e?.response?.data?.message ||
           e.message ||
-          "Failed to update booking status."
+          "Failed to update booking status.",
       );
     } finally {
       setMarking(false);
@@ -172,8 +238,8 @@ const PostProductionDetail = () => {
     try {
       const res = await axios.get(
         `${API_URL}/vendors/specialization/${encodeURIComponent(
-          specializationName
-        )}`
+          specializationName,
+        )}`,
       );
 
       if (res.data?.success && Array.isArray(res.data.data)) {
@@ -200,7 +266,7 @@ const PostProductionDetail = () => {
       for (const unitId of serviceUnitIds) {
         try {
           const res = await axios.get(
-            `${API_URL}/sorting-task/service-unit/${unitId}`
+            `${API_URL}/sorting-task/service-unit/${unitId}`,
           );
           if (res.data?.success && res.data.data) {
             tasks[unitId] = res.data.data; // ✅ directly store the task object
@@ -245,7 +311,7 @@ const PostProductionDetail = () => {
 
     if (numericValue > maxPhotos) {
       alert(
-        `Cannot assign more than ${maxPhotos} photos (available in collected data)`
+        `Cannot assign more than ${maxPhotos} photos (available in collected data)`,
       );
       setAssignData((prev) => ({
         ...prev,
@@ -265,7 +331,7 @@ const PostProductionDetail = () => {
 
     if (numericValue > maxVideos) {
       alert(
-        `Cannot assign more than ${maxVideos} videos (available in collected data)`
+        `Cannot assign more than ${maxVideos} videos (available in collected data)`,
       );
       setAssignData((prev) => ({
         ...prev,
@@ -297,7 +363,6 @@ const PostProductionDetail = () => {
         serviceName: assignData?.serviceName,
         packageId: selectedUnit?.packageId,
         packageName: selectedUnit?.packageName,
-
         taskDescription: assignData.taskDescription,
         noOfPhotos: parseInt(assignData.photosCount) || 0,
         noOfVideos: parseInt(assignData.videosCount) || 0,
@@ -310,6 +375,7 @@ const PostProductionDetail = () => {
         return;
       }
 
+      console.log("Task data to be sent:", taskData);
       const res = await axios.post(`${API_URL}/sorting-task/assign`, taskData);
 
       if (res.data?.success) {
@@ -346,7 +412,8 @@ const PostProductionDetail = () => {
           submittedPhotos: parseInt(submitData.submittedPhotos) || 0,
           submittedVideos: parseInt(submitData.submittedVideos) || 0,
           submittedNotes: submitData.submittedNotes,
-        }
+          submittedDate: submitData.submittedDate,
+        },
       );
 
       if (res.data?.success) {
@@ -361,7 +428,6 @@ const PostProductionDetail = () => {
 
         setShowSubmitModal(false);
         setSelectedTask(null);
- 
       } else {
         alert(res.data?.message || "Failed to submit task");
       }
@@ -375,7 +441,7 @@ const PostProductionDetail = () => {
   const refreshData = async () => {
     try {
       const detailsRes = await axios.get(
-        `${API_URL}/collected-data/details/${id}`
+        `${API_URL}/collected-data/details/${id}`,
       );
 
       if (detailsRes.data?.success && detailsRes.data?.data) {
@@ -436,7 +502,7 @@ const PostProductionDetail = () => {
         setError("");
 
         const detailsRes = await axios.get(
-          `${API_URL}/collected-data/details/${id}`
+          `${API_URL}/collected-data/details/${id}`,
         );
 
         if (detailsRes.data?.success && detailsRes.data?.data) {
@@ -450,7 +516,7 @@ const PostProductionDetail = () => {
 
           if (details.quotationId) {
             const quotationRes = await axios.get(
-              `${API_URL}/quotations/${details.quotationId}`
+              `${API_URL}/quotations/${details.quotationId}`,
             );
             if (quotationRes.data?.quotation) {
               setQuotation(quotationRes.data.quotation);
@@ -492,7 +558,7 @@ const PostProductionDetail = () => {
     // console.log("data", data)
     // if (unit.status == true) {
     navigate(
-      `/post-production/post-production-detail/sorted-data/${data.quotationId}`
+      `/post-production/post-production-detail/sorted-data/${data.quotationId}`,
     );
     // }
   };
@@ -657,8 +723,8 @@ const PostProductionDetail = () => {
               quotation?.bookingStatus === "Completed"
                 ? "success"
                 : quotation?.bookingStatus === "Booked"
-                ? "primary"
-                : "warning"
+                  ? "primary"
+                  : "warning"
             }
             className="px-3 py-2"
           >
@@ -961,8 +1027,8 @@ const PostProductionDetail = () => {
                           u.sortingStatus === "Completed"
                             ? "success"
                             : u.sortingStatus === "Assigned"
-                            ? "warning"
-                            : "secondary"
+                              ? "warning"
+                              : "secondary"
                         }
                       >
                         {u.sortingStatus || "Pending"}
@@ -1102,16 +1168,16 @@ const PostProductionDetail = () => {
       </Modal>
 
       {/* Assign Task Modal */}
-      <Modal
+      {/* <Modal
         show={showAssignModal}
         onHide={() => setShowAssignModal(false)}
         centered
-        size="lg"
+        size="md"
       >
         <Modal.Header closeButton>
           <Modal.Title>Assign Task</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body >
           <div className="row">
             <div className="col-md-6 mb-3">
               <label className="form-label">Event Name</label>
@@ -1134,26 +1200,26 @@ const PostProductionDetail = () => {
           </div>
 
           <div className="mb-3">
-            <label className="form-label">Select Specialization</label>
+            <label className="form-label">Select Task Type</label>
             <Select
               options={specializationOptions}
               value={
                 specializationOptions.find(
-                  (opt) => opt.value === assignData.taskType
+                  (opt) => opt.value === assignData.taskType,
                 ) || null
               }
               onChange={async (selected) => {
                 if (selected) {
-                  // set both value and label for clarity
+               
                   setAssignData((prev) => ({
                     ...prev,
                     taskType: selected.value,
                     vendorId: "",
                   }));
-                  // fetch vendors using readable name (label)
+             
                   await fetchVendorsBySpecialization(selected.label);
                 } else {
-                  // clear when specialization is removed
+                  
                   setAssignData((prev) => ({
                     ...prev,
                     taskType: "",
@@ -1196,8 +1262,6 @@ const PostProductionDetail = () => {
               isDisabled={!assignData.taskType}
             />
           </div>
-
-          {/* Dynamic Fields based on available media and selected task type */}
 
           {selectedUnit?.noOfPhotos > 0 && (
             <div className="mb-3">
@@ -1270,7 +1334,6 @@ const PostProductionDetail = () => {
             />
           </div>
 
-          {/* Available Media Summary */}
           {selectedUnit && (
             <div className="alert alert-info p-2">
               <small>
@@ -1285,6 +1348,345 @@ const PostProductionDetail = () => {
             Cancel
           </Button>
           <Button variant="success" onClick={handleAssignTask}>
+            Assign Task
+          </Button>
+        </Modal.Footer>
+      </Modal> */}
+
+      {/* Assign Task Modal */}
+      <Modal
+        show={showAssignModal}
+        onHide={() => setShowAssignModal(false)}
+        centered
+        size="md"
+      >
+        <Modal.Header closeButton style={{ padding: "10px 14px" }}>
+          <Modal.Title style={{ fontSize: "14px", fontWeight: 600 }}>
+            Assign Task
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body style={{ padding: "12px 14px", fontSize: "12px" }}>
+          <div className="row">
+            <div className="col-md-6 mb-3" style={{ marginBottom: "10px" }}>
+              <label
+                className="form-label"
+                style={{ fontSize: "12px", marginBottom: 4 }}
+              >
+                Event Name
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                value={assignData.eventName}
+                disabled
+                style={{
+                  fontSize: "12px",
+                  height: "32px",
+                  padding: "6px 10px",
+                }}
+              />
+            </div>
+
+            <div className="col-md-6 mb-3" style={{ marginBottom: "10px" }}>
+              <label
+                className="form-label"
+                style={{ fontSize: "12px", marginBottom: 4 }}
+              >
+                Service Name
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                value={assignData.serviceName}
+                disabled
+                style={{
+                  fontSize: "12px",
+                  height: "32px",
+                  padding: "6px 10px",
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="mb-3" style={{ marginBottom: "10px" }}>
+            <label
+              className="form-label"
+              style={{ fontSize: "12px", marginBottom: 4 }}
+            >
+              Select Task Type
+            </label>
+
+            <Select
+              classNamePrefix="rs"
+              options={specializationOptions}
+              value={
+                specializationOptions.find(
+                  (opt) => opt.value === assignData.taskType,
+                ) || null
+              }
+              onChange={async (selected) => {
+                if (selected) {
+                  setAssignData((prev) => ({
+                    ...prev,
+                    taskType: selected.value,
+                    vendorId: "",
+                  }));
+                  await fetchVendorsBySpecialization(selected.label);
+                } else {
+                  setAssignData((prev) => ({
+                    ...prev,
+                    taskType: "",
+                    vendorId: "",
+                  }));
+                  setVendors([]);
+                }
+              }}
+              placeholder="Select Specialization"
+              isClearable
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  minHeight: 32,
+                  height: 32,
+                  fontSize: 12,
+                  borderColor: state.isFocused ? "#86b7fe" : base.borderColor,
+                  boxShadow: state.isFocused
+                    ? "0 0 0 0.12rem rgba(13,110,253,.18)"
+                    : "none",
+                }),
+                valueContainer: (base) => ({ ...base, padding: "0 8px" }),
+                input: (base) => ({
+                  ...base,
+                  margin: 0,
+                  padding: 0,
+                  fontSize: 12,
+                }),
+                placeholder: (base) => ({ ...base, fontSize: 12 }),
+                singleValue: (base) => ({ ...base, fontSize: 12 }),
+                indicatorSeparator: (base) => ({
+                  ...base,
+                  marginTop: 6,
+                  marginBottom: 6,
+                }),
+                dropdownIndicator: (base) => ({ ...base, padding: 4 }),
+                clearIndicator: (base) => ({ ...base, padding: 4 }),
+                menu: (base) => ({ ...base, zIndex: 9999, fontSize: 12 }),
+                option: (base, state) => ({
+                  ...base,
+                  fontSize: 12,
+                  padding: "6px 10px",
+                }),
+
+                    menuPortal: (base) => ({ ...base, zIndex: 999999 }), // ✅ IMPORTANT
+    menu: (base) => ({ ...base, zIndex: 999999 }),       // ✅ IMPORTANT
+              }}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+            />
+          </div>
+
+          <div className="mb-3" style={{ marginBottom: "10px" }}>
+            <label
+              className="form-label"
+              style={{ fontSize: "12px", marginBottom: 4 }}
+            >
+              Select Vendor
+            </label>
+
+            <Select
+              classNamePrefix="rs"
+              options={vendors.map((v) => ({ value: v._id, label: v.name }))}
+              value={
+                vendors
+                  .map((v) => ({ value: v._id, label: v.name }))
+                  .find((opt) => opt.value === assignData.vendorId) || null
+              }
+              onChange={(selected) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  vendorId: selected?.value || "",
+                }))
+              }
+              placeholder={
+                assignData.taskType
+                  ? vendors.length
+                    ? "Select Vendor"
+                    : "No vendors found"
+                  : "Select specialization first"
+              }
+              isClearable
+              isDisabled={!assignData.taskType}
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  minHeight: 32,
+                  height: 32,
+                  fontSize: 12,
+                  borderColor: state.isFocused ? "#86b7fe" : base.borderColor,
+                  boxShadow: state.isFocused
+                    ? "0 0 0 0.12rem rgba(13,110,253,.18)"
+                    : "none",
+                }),
+                valueContainer: (base) => ({ ...base, padding: "0 8px" }),
+                input: (base) => ({
+                  ...base,
+                  margin: 0,
+                  padding: 0,
+                  fontSize: 12,
+                }),
+                placeholder: (base) => ({ ...base, fontSize: 12 }),
+                singleValue: (base) => ({ ...base, fontSize: 12 }),
+                indicatorSeparator: (base) => ({
+                  ...base,
+                  marginTop: 6,
+                  marginBottom: 6,
+                }),
+                dropdownIndicator: (base) => ({ ...base, padding: 4 }),
+                clearIndicator: (base) => ({ ...base, padding: 4 }),
+                menu: (base) => ({ ...base, zIndex: 9999, fontSize: 12 }),
+                option: (base) => ({
+                  ...base,
+                  fontSize: 12,
+                  padding: "6px 10px",
+                }),
+                    menuPortal: (base) => ({ ...base, zIndex: 999999 }), // ✅ IMPORTANT
+    menu: (base) => ({ ...base, zIndex: 999999 }),       // ✅ IMPORTANT
+              }}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+            />
+          </div>
+
+          {/* Dynamic Fields */}
+          {selectedUnit?.noOfPhotos > 0 && (
+            <div className="mb-3" style={{ marginBottom: "10px" }}>
+              <label
+                className="form-label"
+                style={{ fontSize: "12px", marginBottom: 4 }}
+              >
+                No. of Photos to sort
+                <small className="text-muted ms-2" style={{ fontSize: "11px" }}>
+                  (Collected: {selectedUnit?.noOfPhotos} available)
+                </small>
+              </label>
+              <input
+                type="number"
+                className="form-control"
+                value={assignData.photosCount}
+                onChange={(e) => handlePhotoCountChange(e.target.value)}
+                min="0"
+                max={selectedUnit?.noOfPhotos}
+                placeholder={`Enter photos to sort (max ${selectedUnit?.noOfPhotos})`}
+                style={{
+                  fontSize: "12px",
+                  height: "32px",
+                  padding: "6px 10px",
+                }}
+              />
+            </div>
+          )}
+
+          {selectedUnit?.noOfVideos > 0 && (
+            <div className="mb-3" style={{ marginBottom: "10px" }}>
+              <label
+                className="form-label"
+                style={{ fontSize: "12px", marginBottom: 4 }}
+              >
+                No. of Videos to convert
+                <small className="text-muted ms-2" style={{ fontSize: "11px" }}>
+                  (Max: {selectedUnit?.noOfVideos} available)
+                </small>
+              </label>
+              <input
+                type="number"
+                className="form-control"
+                value={assignData.videosCount}
+                onChange={(e) => handleVideoCountChange(e.target.value)}
+                min="0"
+                max={selectedUnit?.noOfVideos}
+                placeholder={`Enter videos to convert (max ${selectedUnit?.noOfVideos})`}
+                style={{
+                  fontSize: "12px",
+                  height: "32px",
+                  padding: "6px 10px",
+                }}
+              />
+            </div>
+          )}
+
+          <div className="mb-3" style={{ marginBottom: "10px" }}>
+            <label
+              className="form-label"
+              style={{ fontSize: "12px", marginBottom: 4 }}
+            >
+              Task Description
+            </label>
+            <textarea
+              className="form-control"
+              rows="2"
+              value={assignData.taskDescription}
+              onChange={(e) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  taskDescription: e.target.value,
+                }))
+              }
+              placeholder="Describe the task requirements..."
+              style={{ fontSize: "12px", padding: "6px 10px" }}
+            />
+          </div>
+
+          <div className="mb-3" style={{ marginBottom: "10px" }}>
+            <label
+              className="form-label"
+              style={{ fontSize: "12px", marginBottom: 4 }}
+            >
+              Completion Date
+            </label>
+            <input
+              type="date"
+              className="form-control"
+              value={assignData.completionDate}
+              onChange={(e) =>
+                setAssignData((prev) => ({
+                  ...prev,
+                  completionDate: e.target.value,
+                }))
+              }
+              style={{ fontSize: "12px", height: "32px", padding: "6px 10px" }}
+            />
+          </div>
+
+          {/* Available Media Summary */}
+          {selectedUnit && (
+            <div
+              className="alert alert-info p-2"
+              style={{ fontSize: "11px", padding: "6px 10px" }}
+            >
+              <small>
+                <strong>Available Media:</strong> {selectedUnit.noOfPhotos}{" "}
+                photos, {selectedUnit.noOfVideos} videos
+              </small>
+            </div>
+          )}
+        </Modal.Body>
+
+        <Modal.Footer style={{ padding: "10px 14px" }}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowAssignModal(false)}
+            size="sm"
+            style={{ fontSize: "12px", padding: "6px 10px" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleAssignTask}
+            size="sm"
+            style={{ fontSize: "12px", padding: "6px 10px" }}
+          >
             Assign Task
           </Button>
         </Modal.Footer>
@@ -1388,100 +1790,110 @@ const PostProductionDetail = () => {
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
-        size="lg"
+        size="md"
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title>Sorting Task Details</Modal.Title>
+          <Modal.Title style={{ fontSize: "16px" }}>
+            Sorting Task Details
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedTask ? (
-            <div>
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Vendor:</strong> {selectedTask.vendorName}
-                </div>
-              </div>
-
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Assigned Date:</strong>{" "}
-                  {dayjs(selectedTask.assignedDate).format("DD-MM-YYYY")}
-                </div>
-                <div className="col-md-6">
-                  <strong>Completion Date:</strong>{" "}
-                  {selectedTask.completionDate
-                    ? dayjs(selectedTask.completionDate).format("DD-MM-YYYY")
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="row mb-3">
-                <div className="col-md-6">
-                  <strong>Assigned Photos:</strong> {selectedTask.noOfPhotos}
-                </div>
-                <div className="col-md-6">
-                  <strong>Assigned Videos:</strong> {selectedTask.noOfVideos}
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <strong>Task Description:</strong>
-                <p>
-                  {selectedTask.taskDescription || "No description provided"}
-                </p>
-              </div>
-
-              {selectedTask.status === "Completed" ? (
-                <>
-                  <div className="row mb-3">
-                    <div className="col-md-6">
-                      <strong>Submitted Photos:</strong>{" "}
-                      {selectedTask.submittedPhotos}
-                    </div>
-                    <div className="col-md-6">
-                      <strong>Submitted Videos:</strong>{" "}
-                      {selectedTask.submittedVideos}
-                    </div>
+          <div style={{ fontSize: "12px" }}>
+            {selectedTask ? (
+              <div>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <strong>Vendor:</strong> {selectedTask.vendorName}
                   </div>
+                </div>
 
-                  <div className="mb-3">
-                    <strong>Submission Notes:</strong>
-                    <p>{selectedTask.submittedNotes || "No notes provided"}</p>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <strong>Assigned Date:</strong>{" "}
+                    {dayjs(selectedTask.assignedDate).format("DD-MM-YYYY")}
                   </div>
-
-                  <div className="mb-3">
-                    <strong>Submitted Date:</strong>{" "}
-                    {selectedTask.submittedDate
-                      ? dayjs(selectedTask.submittedDate).format(
-                          "DD-MM-YYYY HH:mm"
-                        )
+                  <div className="col-md-6">
+                    <strong>Completion Date:</strong>{" "}
+                    {selectedTask.completionDate
+                      ? dayjs(selectedTask.completionDate).format("DD-MM-YYYY")
                       : "-"}
                   </div>
-                </>
-              ) : (
-                <div className="alert alert-info">
-                  <small>
-                    This task is currently <strong>Assigned</strong> but not yet
-                    submitted.
-                  </small>
                 </div>
-              )}
 
-              <div className="mb-3">
-                <strong>Status:</strong>{" "}
-                <Badge
-                  bg={
-                    selectedTask.status === "Completed" ? "success" : "warning"
-                  }
-                >
-                  {selectedTask.status}
-                </Badge>
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <strong>Assigned Photos:</strong> {selectedTask.noOfPhotos}
+                  </div>
+                  <div className="col-md-6">
+                    <strong>Assigned Videos:</strong> {selectedTask.noOfVideos}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <strong>Task Description:</strong>
+                  <p>
+                    {selectedTask.taskDescription || "No description provided"}
+                  </p>
+                </div>
+
+                {selectedTask.status === "Completed" ? (
+                  <>
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <strong>Submitted Photos:</strong>{" "}
+                        {selectedTask.submittedPhotos}
+                      </div>
+                      <div className="col-md-6">
+                        <strong>Submitted Videos:</strong>{" "}
+                        {selectedTask.submittedVideos}
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <strong>Submission Notes:</strong>
+                      <p>
+                        {selectedTask.submittedNotes || "No notes provided"}
+                      </p>
+                    </div>
+
+                    <div className="mb-3">
+                      <strong>Submitted Date:</strong>{" "}
+                      {selectedTask.submittedDate
+                        ? dayjs(selectedTask.submittedDate).format(
+                            "DD-MM-YYYY HH:mm",
+                          )
+                        : "-"}
+                    </div>
+
+                    {renderSubmissionIndicator(selectedTask)}
+                  </>
+                ) : (
+                  <div className="alert alert-info">
+                    <small>
+                      This task is currently <strong>Assigned</strong> but not
+                      yet submitted.
+                    </small>
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <strong>Status:</strong>{" "}
+                  <Badge
+                    bg={
+                      selectedTask.status === "Completed"
+                        ? "success"
+                        : "warning"
+                    }
+                  >
+                    {selectedTask.status}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p>No task details available.</p>
-          )}
+            ) : (
+              <p>No task details available.</p>
+            )}
+          </div>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowViewModal(false)}>

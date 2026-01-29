@@ -58,6 +58,11 @@ const statusOptions = [
   { value: "Completed", label: "Completed" },
 ];
 
+// ✅ Add these near the top of your component (before return)
+const cdLabelStyle = { fontSize: "12px", fontWeight: 600, marginBottom: "4px" };
+const cdInputStyle = { fontSize: "13px", height: "38px" };
+const cdNoteInputStyle = { fontSize: "13px", height: "38px" };
+
 const BookingdetailsPage = () => {
   const [quotationData, setQuotationData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,16 +86,25 @@ const BookingdetailsPage = () => {
   const [collectData, setCollectData] = useState({
     personName: "",
     cameraName: "",
-    totalDriveSize: "",
+
+    // ✅ New storage fields (GB)
+    storageTotalCapacityGb: "",
+    existingDataSizeBeforeEventGb: "",
+    existingFilesCountBeforeEvent: "",
+    thisEventDataSizeGb: "", // optional
+    totalUsedAfterEventGb: "", // optional
+
+    // existing fields
     backupDrive: "",
     driveName: "",
     qualityChecked: false,
-    filledSize: "",
+
     copyingPerson: "",
     systemNumber: "",
     backupSystemNumber: "",
     copiedLocation: "",
     backupCopiedLocation: "",
+
     noOfPhotos: "",
     noOfVideos: "",
     firstPhotoTime: "",
@@ -184,7 +198,7 @@ const BookingdetailsPage = () => {
           instagramHandle: personFormData.instagramHandle,
           email: personFormData.email,
           profession: personFormData.profession,
-        }
+        },
       );
       // Update all fields after API call
       setQuotationData((prev) => ({
@@ -199,7 +213,7 @@ const BookingdetailsPage = () => {
                   email: personFormData.email,
                   profession: personFormData.profession,
                 }
-              : p
+              : p,
           ),
         },
       }));
@@ -216,7 +230,7 @@ const BookingdetailsPage = () => {
     try {
       const res = await axios.put(
         `${API_URL}/quotations/${id}/instruction/add`,
-        { instruction: newInstruction.trim() }
+        { instruction: newInstruction.trim() },
       );
       setQuotationData((prev) => ({
         ...prev,
@@ -234,7 +248,7 @@ const BookingdetailsPage = () => {
     try {
       const res = await axios.delete(
         `${API_URL}/quotations/${id}/instruction/delete`,
-        { data: { instruction: instructionToDelete } }
+        { data: { instruction: instructionToDelete } },
       );
       setQuotationData((prev) => ({
         ...prev,
@@ -250,9 +264,7 @@ const BookingdetailsPage = () => {
   useEffect(() => {
     const fetchCollectedData = async () => {
       try {
-        const res = await axios.get(
-          `${API_URL}/collected-data/${id}`
-        );
+        const res = await axios.get(`${API_URL}/collected-data/${id}`);
         setCollectedDataList(res.data.data);
       } catch (err) {
         setCollectedDataList(null);
@@ -289,10 +301,10 @@ const BookingdetailsPage = () => {
           sum +
           (pkg.services || []).reduce(
             (s, srv) => s + (Number(srv.qty) || 1) * (Number(srv.price) || 0),
-            0
+            0,
           ),
-        0
-      )
+        0,
+      ),
     );
 
   // Draft package total (for showing inside the modal)
@@ -300,7 +312,7 @@ const BookingdetailsPage = () => {
     if (!pkgDraft) return 0;
     return (pkgDraft.services || []).reduce(
       (s, srv) => s + (Number(srv.qty) || 1) * (Number(srv.price) || 0),
-      0
+      0,
     );
   }, [pkgDraft]);
 
@@ -311,18 +323,18 @@ const BookingdetailsPage = () => {
         sum +
         (pkg.services || []).reduce(
           (s, srv) => s + Number(srv.qty || 1) * Number(srv.price || 0),
-          0
+          0,
         ),
-      0
-    )
+      0,
+    ),
   );
 
   const albumSubtotal = useMemo(
     () =>
       Math.round(
-        (albums || []).reduce((sum, a) => sum + computeAlbumTotal(a), 0)
+        (albums || []).reduce((sum, a) => sum + computeAlbumTotal(a), 0),
       ),
-    [albums]
+    [albums],
   );
 
   const totalBeforeDiscount = packageSubtotal + albumSubtotal;
@@ -340,10 +352,10 @@ const BookingdetailsPage = () => {
         sum +
         (pkg.services || []).reduce(
           (s, srv) => s + Number(srv.qty || 1) * Number(srv.marginPrice || 0),
-          0
+          0,
         ),
-      0
-    )
+      0,
+    ),
   );
   const totalMarginBeforeDiscount = packageMarginSubtotal + albumSubtotal;
   const marginAfterDiscount = totalMarginBeforeDiscount;
@@ -372,10 +384,7 @@ const BookingdetailsPage = () => {
     };
 
     try {
-      await axios.put(
-        `${API_URL}/quotations/${id}/totals-min`,
-        payload
-      );
+      await axios.put(`${API_URL}/quotations/${id}/totals-min`, payload);
       await fetchQuotation(); // refresh
       toast.success("Discount updated");
     } catch (err) {
@@ -391,13 +400,13 @@ const BookingdetailsPage = () => {
   // Compute album subtotal for any array (used when we have a "next" array)
   const computeAlbumSubtotalNow = (albumsArr) =>
     Math.round(
-      (albumsArr || []).reduce((sum, a) => sum + computeAlbumTotal(a), 0)
+      (albumsArr || []).reduce((sum, a) => sum + computeAlbumTotal(a), 0),
     );
 
   const buildMinimalTotals = (
     albumsOverride = null,
     packagesOverride = null,
-    discountOverride = null // ✅ allow override
+    discountOverride = null, // ✅ allow override
   ) => {
     const albumsArr = Array.isArray(albumsOverride) ? albumsOverride : albums;
     const packagesArr = Array.isArray(packagesOverride)
@@ -408,7 +417,7 @@ const BookingdetailsPage = () => {
     const packageSubtotalNow = computePackageSubtotalNow(packagesArr);
 
     const totalBeforeDiscountNow = Math.round(
-      packageSubtotalNow + albumSubtotalNow
+      packageSubtotalNow + albumSubtotalNow,
     );
 
     // ✅ Use override if provided, else current discountValue
@@ -419,7 +428,7 @@ const BookingdetailsPage = () => {
 
     const totalAfterDiscountNow = Math.max(
       0,
-      Math.round(totalBeforeDiscountNow - discountValueNow)
+      Math.round(totalBeforeDiscountNow - discountValueNow),
     );
 
     const gstNow = quotationData?.gstApplied
@@ -431,7 +440,7 @@ const BookingdetailsPage = () => {
     // --- Installments recalculation ---
     const calculatedInstallments = (installments || []).map((inst) => {
       const newAmount = Math.round(
-        (inst.paymentPercentage / 100) * grandTotalNow
+        (inst.paymentPercentage / 100) * grandTotalNow,
       );
       return {
         ...inst,
@@ -445,7 +454,7 @@ const BookingdetailsPage = () => {
       const previouslyPaid = inst.paidAmount || 0;
       const newPaidAmount = Math.min(
         inst.paymentAmount,
-        previouslyPaid + remainingPayment
+        previouslyPaid + remainingPayment,
       );
       const pending = inst.paymentAmount - newPaidAmount;
       remainingPayment = previouslyPaid + remainingPayment - newPaidAmount;
@@ -476,7 +485,7 @@ const BookingdetailsPage = () => {
 
     // --- Margin calculations (discount as value, not percent) ---
     const totalMarginBeforeDiscountNow = Math.round(
-      packageMarginSubtotal + albumSubtotalNow
+      packageMarginSubtotal + albumSubtotalNow,
     );
 
     // Defensive: avoid division by zero
@@ -484,7 +493,7 @@ const BookingdetailsPage = () => {
 
     const marginAfterDiscountNow = Math.max(
       0,
-      totalMarginBeforeDiscountNow - discountValueNow
+      totalMarginBeforeDiscountNow - discountValueNow,
     );
 
     const marginGstNow = quotationData?.gstApplied
@@ -492,7 +501,7 @@ const BookingdetailsPage = () => {
       : 0;
 
     const totalMarginFinalNow = Math.round(
-      marginAfterDiscountNow + marginGstNow
+      marginAfterDiscountNow + marginGstNow,
     );
 
     return {
@@ -516,10 +525,7 @@ const BookingdetailsPage = () => {
   const pushMinimalTotalsFrom = async (albumsOverride = null) => {
     try {
       const payload = buildMinimalTotals(albumsOverride, null, discountValue);
-      await axios.put(
-        `${API_URL}/quotations/${id}/totals-min`,
-        payload
-      );
+      await axios.put(`${API_URL}/quotations/${id}/totals-min`, payload);
       fetchQuotation();
     } catch (e) {
       console.error("Failed to update totals", e);
@@ -550,7 +556,7 @@ const BookingdetailsPage = () => {
 
     const res = await axios.put(
       `${API_URL}/quotations/${id}/totals-min`,
-      payload
+      payload,
     );
 
     if (res?.data?.quotation) {
@@ -609,7 +615,7 @@ const BookingdetailsPage = () => {
               qty: Math.max(1, Number(s.qty) || 1), // enforce min 1
             })),
           }
-        : p
+        : p,
     );
 
     // Optimistic UI update
@@ -641,7 +647,7 @@ const BookingdetailsPage = () => {
   const getTotalAllocatedPercentage = (customList = installments) => {
     return customList.reduce(
       (sum, i) => sum + (Number(i.paymentPercentage) || 0),
-      0
+      0,
     );
   };
 
@@ -667,7 +673,7 @@ const BookingdetailsPage = () => {
         if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
           updated[index].paymentPercentage = parsed;
           updated[index].paymentAmount = Math.round(
-            (totalAmount * parsed) / 100
+            (totalAmount * parsed) / 100,
           );
         }
       }
@@ -682,7 +688,7 @@ const BookingdetailsPage = () => {
       (s) =>
         s.packageId?.toString() === packageId?.toString() &&
         s.serviceId?.toString() === serviceId?.toString() &&
-        Number(s.unitIndex) === Number(unitIndex)
+        Number(s.unitIndex) === Number(unitIndex),
     );
   };
 
@@ -691,7 +697,7 @@ const BookingdetailsPage = () => {
     const existing = findCollectedForServiceUnit(
       pkg._id,
       service._id,
-      unitIndex
+      unitIndex,
     );
     setSelectedServiceUnit({
       packageId: pkg._id,
@@ -702,32 +708,50 @@ const BookingdetailsPage = () => {
       unitIndex,
     });
 
+    // ✅ Updated: handleOpenCollectForUnit (ONLY setCollectData part)
     setCollectData({
+      // parent level (common for all units)
       personName: collectedDataList?.personName || "",
-      cameraName: existing?.cameraName || "",
-      totalDriveSize: existing?.totalDriveSize || "",
-      backupDrive: existing?.backupDrive || "",
-      driveName: existing?.driveName || "",
-      qualityChecked: existing?.qualityChecked || false,
-      filledSize: existing?.filledSize || "",
-      copyingPerson: existing?.copyingPerson || "",
       systemNumber: collectedDataList?.systemNumber || "",
       backupSystemNumber:
         collectedDataList?.backupSystemNumber ||
         existing?.backupSystemNumber ||
         "",
+
+      // unit level
+      cameraName: existing?.cameraName || "",
+
+      // ✅ NEW storage fields
+      storageTotalCapacityGb: existing?.storageTotalCapacityGb || "",
+      existingDataSizeBeforeEventGb:
+        existing?.existingDataSizeBeforeEventGb || "",
+      existingFilesCountBeforeEvent:
+        existing?.existingFilesCountBeforeEvent ?? "",
+      thisEventDataSizeGb: existing?.thisEventDataSizeGb || "",
+      totalUsedAfterEventGb: existing?.totalUsedAfterEventGb || "",
+
+      // other fields
+      backupDrive: existing?.backupDrive || "",
+      driveName: existing?.driveName || "",
+      qualityChecked: existing?.qualityChecked || false,
+
+      copyingPerson: existing?.copyingPerson || "",
       copiedLocation: existing?.copiedLocation || "",
       backupCopiedLocation: existing?.backupCopiedLocation || "",
-      noOfPhotos: existing?.noOfPhotos || "",
-      noOfVideos: existing?.noOfVideos || "",
+
+      noOfPhotos: existing?.noOfPhotos ?? "",
+      noOfVideos: existing?.noOfVideos ?? "",
+
       firstPhotoTime: existing?.firstPhotoTime || "",
       lastPhotoTime: existing?.lastPhotoTime || "",
       firstVideoTime: existing?.firstVideoTime || "",
       lastVideoTime: existing?.lastVideoTime || "",
+
       submissionDate: existing?.submissionDate
         ? dayjs(existing.submissionDate).format("YYYY-MM-DD")
         : "",
       notes: existing?.notes || "",
+
       collectionType: "both", // frontend-only
     });
 
@@ -741,7 +765,7 @@ const BookingdetailsPage = () => {
 
       setCollectData((prev) => ({
         ...prev,
-        [name]: type === "checkbox" ? checked : value, 
+        [name]: type === "checkbox" ? checked : value,
       }));
     } catch (err) {
       console.error("handleCollectDataChange error:", err);
@@ -771,11 +795,19 @@ const BookingdetailsPage = () => {
 
         // Collection details
         cameraName: collectData.cameraName,
-        totalDriveSize: collectData.totalDriveSize,
+
+        // ✅ NEW storage fields
+        storageTotalCapacityGb: collectData.storageTotalCapacityGb,
+        existingDataSizeBeforeEventGb:
+          collectData.existingDataSizeBeforeEventGb,
+        existingFilesCountBeforeEvent:
+          collectData.existingFilesCountBeforeEvent,
+        thisEventDataSizeGb: collectData.thisEventDataSizeGb,
+        totalUsedAfterEventGb: collectData.totalUsedAfterEventGb,
+
         backupDrive: collectData.backupDrive,
         driveName: collectData.driveName,
         qualityChecked: collectData.qualityChecked,
-        filledSize: collectData.filledSize,
         copyingPerson: collectData.copyingPerson,
         copiedLocation: collectData.copiedLocation,
         backupCopiedLocation: collectData.backupCopiedLocation,
@@ -796,7 +828,7 @@ const BookingdetailsPage = () => {
       await axios.post(`${API_URL}/collected-data/`, payload);
 
       toast.success(
-        editMode ? "Data updated successfully" : "Data collected successfully"
+        editMode ? "Data updated successfully" : "Data collected successfully",
       );
 
       // Reset after submit
@@ -804,14 +836,21 @@ const BookingdetailsPage = () => {
       setSelectedVendor(null);
       setSelectedServiceUnit(null);
       setEditMode(false);
+
       setCollectData({
         personName: "",
         cameraName: "",
-        totalDriveSize: "",
+
+        // ✅ NEW storage fields
+        storageTotalCapacityGb: "",
+        existingDataSizeBeforeEventGb: "",
+        existingFilesCountBeforeEvent: "",
+        thisEventDataSizeGb: "",
+        totalUsedAfterEventGb: "",
+
         backupDrive: "",
         driveName: "",
         qualityChecked: false,
-        filledSize: "",
         copyingPerson: "",
         systemNumber: "",
         backupSystemNumber: "",
@@ -856,13 +895,13 @@ const BookingdetailsPage = () => {
         // 🔁 Update existing installment
         response = await axios.put(
           `${API_URL}/quotations/${id}/installment/${inst._id}`,
-          payload
+          payload,
         );
       } else {
         // 🆕 Create new installment (use `new` as dummy ID)
         response = await axios.put(
           `${API_URL}/quotations/${id}/installment/new`,
-          payload
+          payload,
         );
       }
 
@@ -879,16 +918,14 @@ const BookingdetailsPage = () => {
 
   const handleDeleteInstallment = async (index) => {
     const confirm = window.confirm(
-      "Are you sure you want to delete this installment?"
+      "Are you sure you want to delete this installment?",
     );
     if (!confirm) return;
 
     const inst = installments[index];
 
     try {
-      await axios.delete(
-        `${API_URL}/quotations/${id}/installment/${inst._id}`
-      );
+      await axios.delete(`${API_URL}/quotations/${id}/installment/${inst._id}`);
       toast.success("Installment deleted successfully");
 
       const updated = [...installments];
@@ -926,8 +963,8 @@ const BookingdetailsPage = () => {
       const vendorArr = Array.isArray(srv.assignedVendors)
         ? srv.assignedVendors
         : srv.assignedVendor
-        ? [srv.assignedVendor]
-        : [];
+          ? [srv.assignedVendor]
+          : [];
       const asstArr = Array.isArray(srv.assignedAssistants)
         ? srv.assignedAssistants
         : [];
@@ -941,7 +978,7 @@ const BookingdetailsPage = () => {
           ? asstArr[unitIndex] || null
           : null,
       }));
-    })
+    }),
   );
 
   // Keep your existing vendor-assign flow per package
@@ -982,7 +1019,7 @@ const BookingdetailsPage = () => {
   const handleAlbumUpdate = (serverAlbum) => {
     const idToMatch = getAlbumId(serverAlbum);
     const next = albums.map((a) =>
-      getAlbumId(a) === idToMatch ? serverAlbum : a
+      getAlbumId(a) === idToMatch ? serverAlbum : a,
     );
 
     setAlbums(next);
@@ -1004,12 +1041,14 @@ const BookingdetailsPage = () => {
   const handleAlbumQtyDelta = (id, delta) =>
     setAlbums((prev) =>
       prev.map((a) =>
-        a.id === id ? { ...a, qty: Math.max(1, (a.qty || 1) + delta) } : a
-      )
+        a.id === id ? { ...a, qty: Math.max(1, (a.qty || 1) + delta) } : a,
+      ),
     );
   const handleAlbumPriceChange = (id, val) =>
     setAlbums((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, unitPrice: Number(val) || 0 } : a))
+      prev.map((a) =>
+        a.id === id ? { ...a, unitPrice: Number(val) || 0 } : a,
+      ),
     );
 
   const handleAlbumRemove = async (albumId) => {
@@ -1022,7 +1061,7 @@ const BookingdetailsPage = () => {
 
     try {
       const res = await axios.delete(
-        `${API_URL}/quotations/${id}/albums/${albumId}`
+        `${API_URL}/quotations/${id}/albums/${albumId}`,
       );
 
       // Prefer server list; fallback to local
@@ -1057,7 +1096,7 @@ const BookingdetailsPage = () => {
     setExistingHolders(
       Array.isArray(installment.accountHolders)
         ? installment.accountHolders
-        : []
+        : [],
     );
     setNewHolder({ name: "" });
     setShowPaymentModal(true);
@@ -1095,7 +1134,7 @@ const BookingdetailsPage = () => {
       };
       const res = await axios.put(
         `${API_URL}/quotations/${id}/installment/${selectedInstallment._id}`,
-        payload
+        payload,
       );
 
       if (res.data?.success) {
@@ -1504,7 +1543,7 @@ const BookingdetailsPage = () => {
                           {findCollectedForServiceUnit(
                             r.pkg._id,
                             r.service._id,
-                            r.unitIndex
+                            r.unitIndex,
                           )
                             ? "Edit Collected data"
                             : "Collect Data"}
@@ -1519,14 +1558,14 @@ const BookingdetailsPage = () => {
                           handleOpenCollectForUnit(
                             r.pkg,
                             r.service,
-                            r.unitIndex
+                            r.unitIndex,
                           )
                         }
                       >
                         {findCollectedForServiceUnit(
                           r.pkg._id,
                           r.service._id,
-                          r.unitIndex
+                          r.unitIndex,
                         ) ? (
                           <BsCheckCircleFill style={{ fontSize: "16px" }} />
                         ) : (
@@ -1550,7 +1589,7 @@ const BookingdetailsPage = () => {
           centered
           size="xl"
         >
-          <Modal.Header closeButton>
+          <Modal.Header closeButton style={{ padding: "14px 18px" }}>
             <Modal.Title className="fw-bold" style={{ fontSize: "16px" }}>
               {editMode ? "Edit Collected Data" : "Collect Data"} -{" "}
               {selectedServiceUnit
@@ -1567,17 +1606,18 @@ const BookingdetailsPage = () => {
             </Modal.Title>
           </Modal.Header>
 
-          <Modal.Body>
-            <Form style={{ fontSize: "14px" }}>
+          <Modal.Body style={{ padding: "16px 18px" }}>
+            <Form style={{ fontSize: "13px" }}>
               <Row className="g-3">
                 {/* Person Name */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       Couples / Person Name{" "}
                       <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="personName"
                       value={collectData.personName}
@@ -1590,10 +1630,11 @@ const BookingdetailsPage = () => {
                 {/* Camera Name */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       Camera Name <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="cameraName"
                       value={collectData.cameraName}
@@ -1603,35 +1644,93 @@ const BookingdetailsPage = () => {
                   </Form.Group>
                 </Col>
 
-                {/* Total Drive Size */}
+                {/* Storage Total Capacity (GB) */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
-                      Total Card/Drive/Pendrive Size{" "}
+                    <Form.Label style={cdLabelStyle}>
+                      Storage Total Capacity (GB){" "}
                       <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
-                      name="totalDriveSize"
-                      value={collectData.totalDriveSize}
+                      name="storageTotalCapacityGb"
+                      value={collectData.storageTotalCapacityGb}
                       onChange={handleCollectDataChange}
-                      placeholder="Enter Total Size"
+                      placeholder="Eg: 64"
                     />
                   </Form.Group>
                 </Col>
 
-                {/* Filled Size */}
+                {/* Existing Data Sized (Before Event) (GB) */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
-                      Filled Size <span className="text-danger">*</span>
+                    <Form.Label style={cdLabelStyle}>
+                      Existing Data Sized (Before Event) (GB){" "}
+                      <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
-                      name="filledSize"
-                      value={collectData.filledSize}
+                      name="existingDataSizeBeforeEventGb"
+                      value={collectData.existingDataSizeBeforeEventGb}
                       onChange={handleCollectDataChange}
-                      placeholder="Enter Filled Size"
+                      placeholder="Eg: 12"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Existing Files Count (Before Event) */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label style={cdLabelStyle}>
+                      Existing Files/Folder Count (Before Event){" "}
+                      <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      style={cdInputStyle}
+                      type="number"
+                      name="existingFilesCountBeforeEvent"
+                      value={collectData.existingFilesCountBeforeEvent}
+                      onChange={handleCollectDataChange}
+                      placeholder="Eg: 350"
+                      min={0}
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* This Event Data Size (GB) (optional) */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label style={cdLabelStyle}>
+                      This Event Data Size (GB){" "}
+                      <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      style={cdInputStyle}
+                      type="text"
+                      name="thisEventDataSizeGb"
+                      value={collectData.thisEventDataSizeGb}
+                      onChange={handleCollectDataChange}
+                      placeholder="Eg: 18"
+                    />
+                  </Form.Group>
+                </Col>
+
+                {/* Total Used After Event (GB) (optional) */}
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label style={cdLabelStyle}>
+                      Total Used After Event (GB)
+                      <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      style={cdInputStyle}
+                      type="text"
+                      name="totalUsedAfterEventGb"
+                      value={collectData.totalUsedAfterEventGb}
+                      onChange={handleCollectDataChange}
+                      placeholder="Eg: 30"
                     />
                   </Form.Group>
                 </Col>
@@ -1639,10 +1738,11 @@ const BookingdetailsPage = () => {
                 {/* Copying Person */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       Person Copying Data <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="copyingPerson"
                       value={collectData.copyingPerson}
@@ -1655,10 +1755,11 @@ const BookingdetailsPage = () => {
                 {/* System Number */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       System Number <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="systemNumber"
                       value={collectData.systemNumber}
@@ -1671,10 +1772,11 @@ const BookingdetailsPage = () => {
                 {/* Copied Location */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       Copied Location <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="copiedLocation"
                       value={collectData.copiedLocation}
@@ -1687,8 +1789,11 @@ const BookingdetailsPage = () => {
                 {/* Backup System Number */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Backup System Number</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      Backup System Number
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="backupSystemNumber"
                       value={collectData.backupSystemNumber}
@@ -1701,8 +1806,11 @@ const BookingdetailsPage = () => {
                 {/* Backup Copied Location */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Backup Copied Location</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      Backup Copied Location
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="backupCopiedLocation"
                       value={collectData.backupCopiedLocation}
@@ -1715,10 +1823,11 @@ const BookingdetailsPage = () => {
                 {/* Backup Drive */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label style={cdLabelStyle}>
                       Backup Drive (Hard Disk / Pen Drive)
                     </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="backupDrive"
                       value={collectData.backupDrive}
@@ -1731,8 +1840,9 @@ const BookingdetailsPage = () => {
                 {/* Drive Name */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Drive Name</Form.Label>
+                    <Form.Label style={cdLabelStyle}>Drive Name</Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="text"
                       name="driveName"
                       value={collectData.driveName}
@@ -1745,20 +1855,26 @@ const BookingdetailsPage = () => {
                 {/* Photos */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>No. of Photos</Form.Label>
+                    <Form.Label style={cdLabelStyle}>No. of Photos</Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="number"
                       name="noOfPhotos"
                       value={collectData.noOfPhotos}
                       onChange={handleCollectDataChange}
                       placeholder="Enter No. of Photos"
+                      min={0}
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>First Photo Clip Time</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      First Photo Clip Time
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="time"
                       name="firstPhotoTime"
                       value={collectData.firstPhotoTime}
@@ -1766,10 +1882,14 @@ const BookingdetailsPage = () => {
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Last Photo Clip Time</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      Last Photo Clip Time
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="time"
                       name="lastPhotoTime"
                       value={collectData.lastPhotoTime}
@@ -1781,20 +1901,26 @@ const BookingdetailsPage = () => {
                 {/* Videos */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>No. of Videos</Form.Label>
+                    <Form.Label style={cdLabelStyle}>No. of Videos</Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="number"
                       name="noOfVideos"
                       value={collectData.noOfVideos}
                       onChange={handleCollectDataChange}
                       placeholder="Enter No. of Videos"
+                      min={0}
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>First Video Clip Time</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      First Video Clip Time
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="time"
                       name="firstVideoTime"
                       value={collectData.firstVideoTime}
@@ -1802,10 +1928,14 @@ const BookingdetailsPage = () => {
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Last Video Clip Time</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      Last Video Clip Time
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="time"
                       name="lastVideoTime"
                       value={collectData.lastVideoTime}
@@ -1817,8 +1947,11 @@ const BookingdetailsPage = () => {
                 {/* Submission Date */}
                 <Col md={4}>
                   <Form.Group>
-                    <Form.Label>Submission Date</Form.Label>
+                    <Form.Label style={cdLabelStyle}>
+                      Submission Date
+                    </Form.Label>
                     <Form.Control
+                      style={cdInputStyle}
                       type="date"
                       name="submissionDate"
                       value={collectData.submissionDate}
@@ -1830,8 +1963,9 @@ const BookingdetailsPage = () => {
                 {/* Notes */}
                 <Col md={8}>
                   <Form.Group>
-                    <Form.Label>Notes</Form.Label>
+                    <Form.Label style={cdLabelStyle}>Notes</Form.Label>
                     <Form.Control
+                      style={cdNoteInputStyle}
                       type="text"
                       name="notes"
                       value={collectData.notes}
@@ -1843,10 +1977,14 @@ const BookingdetailsPage = () => {
               </Row>
 
               {/* Quality Checkbox */}
-              <div className="d-flex mt-4 gap-1">
+              <div className="d-flex mt-3 gap-2 align-items-center">
                 <Form.Check
                   type="checkbox"
-                  label="Quality Checked"
+                  label={
+                    <span style={{ fontSize: "12px", fontWeight: 600 }}>
+                      Quality Checked
+                    </span>
+                  }
                   name="qualityChecked"
                   checked={collectData.qualityChecked || false}
                   onChange={handleCollectDataChange}
@@ -1856,21 +1994,25 @@ const BookingdetailsPage = () => {
             </Form>
           </Modal.Body>
 
-          <Modal.Footer className="justify-content-center">
+          <Modal.Footer
+            style={{ padding: "12px 18px" }}
+            className="justify-content-center gap-2"
+          >
             <Button
-              variant="secondary"
+              variant="outline-secondary"
               onClick={() => {
                 setShowCollectDataModal(false);
                 setEditMode(false);
               }}
-              className="px-4"
+              style={{ fontSize: "13px", padding: "8px 16px" }}
             >
               Cancel
             </Button>
+
             <Button
               variant="dark"
               onClick={() => handleCollectDataSubmit(collectData)}
-              className="px-4"
+              style={{ fontSize: "13px", padding: "8px 16px", fontWeight: 700 }}
             >
               {editMode ? "Update" : "Submit"}
             </Button>
@@ -1892,12 +2034,12 @@ const BookingdetailsPage = () => {
           {quotationData.packages.map((pkg, index) => {
             const packageTotal = pkg.services.reduce(
               (sum, srv) => sum + srv.qty * srv.price,
-              0
+              0,
             );
             // Find if collected data exists for this package/event
             const collectedEvent = collectedDataList?.events?.find(
               (ev) =>
-                ev.eventId === pkg._id || ev.eventId === pkg._id?.toString()
+                ev.eventId === pkg._id || ev.eventId === pkg._id?.toString(),
             );
 
             return (
@@ -2185,7 +2327,7 @@ const BookingdetailsPage = () => {
                               handleFieldChange(
                                 index,
                                 "paymentPercentage",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             style={{ fontSize: "13px", width: "80px" }}
@@ -2207,8 +2349,8 @@ const BookingdetailsPage = () => {
                             inst.status === "Completed"
                               ? "bg-success"
                               : inst.status === "Partial Paid"
-                              ? "bg-primary" // Custom class defined in your CSS
-                              : "bg-danger"
+                                ? "bg-primary" // Custom class defined in your CSS
+                                : "bg-danger"
                           }`}
                         >
                           {inst.status}
@@ -2348,14 +2490,14 @@ const BookingdetailsPage = () => {
                 // ✅ Call unified API
                 const res = await axios.put(
                   `${API_URL}/quotations/${id}/group-note`,
-                  payload
+                  payload,
                 );
 
                 fetchQuotation();
                 toast.success(
                   `${
                     actionType === "group" ? "Group name" : "Note"
-                  } saved successfully!`
+                  } saved successfully!`,
                 );
                 setShowActionModal(false);
                 setActionValue(""); // reset field
@@ -2371,16 +2513,32 @@ const BookingdetailsPage = () => {
       </Modal>
 
       {/* Payment Modal */}
-      <Modal show={showPaymentModal} onHide={() => setShowPaymentModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Record Payment</Modal.Title>
+      <Modal
+        show={showPaymentModal}
+        onHide={() => setShowPaymentModal(false)}
+        centered
+      >
+        <Modal.Header closeButton style={{ padding: "14px 18px" }}>
+          <Modal.Title
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              margin: 0,
+              letterSpacing: "0.2px",
+            }}
+          >
+            Record Payment
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <div className="row">
+
+        <Modal.Body style={{ padding: "16px 18px" }}>
+          <Form style={{ fontSize: "13px" }}>
+            <div className="row g-3">
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Payment Date</Form.Label>
+                <Form.Group>
+                  <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                    Payment Date
+                  </Form.Label>
                   <Form.Control
                     type="date"
                     value={paymentData.paymentDate}
@@ -2390,12 +2548,16 @@ const BookingdetailsPage = () => {
                         paymentDate: e.target.value,
                       })
                     }
+                    style={{ fontSize: "13px", height: "38px" }}
                   />
                 </Form.Group>
               </div>
+
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Payment Mode</Form.Label>
+                <Form.Group>
+                  <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                    Payment Mode
+                  </Form.Label>
                   <Form.Select
                     value={paymentData.paymentMode}
                     onChange={(e) =>
@@ -2404,6 +2566,7 @@ const BookingdetailsPage = () => {
                         paymentMode: e.target.value,
                       })
                     }
+                    style={{ fontSize: "13px", height: "38px" }}
                   >
                     {paymentModes.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -2413,12 +2576,12 @@ const BookingdetailsPage = () => {
                   </Form.Select>
                 </Form.Group>
               </div>
-            </div>
 
-            <div className="row">
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Pending Amount to Pay</Form.Label>
+                <Form.Group>
+                  <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                    Pending Amount to Pay
+                  </Form.Label>
                   <Form.Control
                     type="number"
                     min={1}
@@ -2431,16 +2594,25 @@ const BookingdetailsPage = () => {
                       if (val < 1) val = 1;
                       setPaymentData({ ...paymentData, amount: val });
                     }}
-                    className="fw-bold"
+                    style={{
+                      fontSize: "14px",
+                      height: "38px",
+                      fontWeight: 700,
+                    }}
                   />
-                  <Form.Text muted>
+                  <div
+                    style={{ fontSize: "11px", color: "#6c757d", marginTop: 4 }}
+                  >
                     Max: ₹{selectedInstallment?.pendingAmount?.toLocaleString()}
-                  </Form.Text>
+                  </div>
                 </Form.Group>
               </div>
+
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Status</Form.Label>
+                <Form.Group>
+                  <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                    Status
+                  </Form.Label>
                   <Form.Select
                     value={paymentData.status}
                     onChange={(e) =>
@@ -2449,6 +2621,7 @@ const BookingdetailsPage = () => {
                         status: e.target.value,
                       })
                     }
+                    style={{ fontSize: "13px", height: "38px" }}
                   >
                     {statusOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -2458,58 +2631,127 @@ const BookingdetailsPage = () => {
                   </Form.Select>
                 </Form.Group>
               </div>
-            </div>
 
-            {/* Existing account holders list (read-only) */}
-            {existingHolders.length > 0 && (
-              <Form.Group className="mb-3">
-                <Form.Label>Already Recorded Account Holders</Form.Label>
-                <div className="border rounded p-2">
-                  {existingHolders.map((h, idx) => (
-                    <div key={idx}>{h.name}</div>
-                  ))}
+              {/* Existing account holders */}
+              {existingHolders.length > 0 && (
+                <div className="col-12">
+                  <Form.Group>
+                    <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                      Already Recorded Account Holders
+                    </Form.Label>
+                    <div
+                      className=" rounded"
+                      style={{
+                        // padding: "10px",
+                        fontSize: "13px",
+                        background: "#fafafa",
+                        maxHeight: 90,
+                        overflow: "auto",
+                      }}
+                    >
+                      {existingHolders.map((h, idx) => (
+                        <div key={idx} style={{ padding: "2px 0" }}>
+                          • {h.name}
+                        </div>
+                      ))}
+                    </div>
+                  </Form.Group>
                 </div>
-              </Form.Group>
-            )}
+              )}
 
-            {/* New account holder (only name, no amount) */}
-            <Form.Group className="mb-3">
-              <Form.Label>Add Account Holder</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Enter account holder name"
-                value={newHolder.name}
-                onChange={(e) => setNewHolder({ name: e.target.value })}
-              />
-            </Form.Group>
+              {/* New account holder */}
+              <div className="col-12">
+                <Form.Group>
+                  <Form.Label style={{ fontSize: "12px", fontWeight: 600 }}>
+                    Add Account Holder
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter account holder name"
+                    value={newHolder.name}
+                    onChange={(e) => setNewHolder({ name: e.target.value })}
+                    style={{ fontSize: "13px", height: "38px" }}
+                  />
+                </Form.Group>
+              </div>
+            </div>
+
+            {/* ✅ Summary Card */}
+            <div
+              className="border rounded mt-4"
+              style={{
+                padding: "12px",
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: "#343a40",
+                }}
+              >
+                Payment Summary
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center py-1">
+                <div style={{ fontSize: "12px", color: "#6c757d" }}>
+                  Total Installment Amount
+                </div>
+                <div style={{ fontSize: "13px", fontWeight: 800 }}>
+                  ₹{selectedInstallment?.paymentAmount?.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center py-1">
+                <div style={{ fontSize: "12px", color: "#6c757d" }}>
+                  Pending Amount
+                </div>
+                <span
+                  className="badge bg-warning text-dark"
+                  style={{ fontSize: "12px", padding: "6px 10px" }}
+                >
+                  ₹{selectedInstallment?.pendingAmount?.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center py-1">
+                <div style={{ fontSize: "12px", color: "#6c757d" }}>
+                  Paid Amount
+                </div>
+                <span
+                  className="badge bg-success"
+                  style={{ fontSize: "12px", padding: "6px 10px" }}
+                >
+                  ₹{selectedInstallment?.paidAmount?.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </Form>
-          <hr />
-          <div className="text-center">
-            <div>
-              <strong>Total Installment Amount:</strong> ₹
-              {selectedInstallment?.paymentAmount?.toLocaleString()}
-            </div>
-            <div>
-              <strong>Pending Amount:</strong> ₹
-              {selectedInstallment?.pendingAmount?.toLocaleString()}
-            </div>
-            <div>
-              <strong>Paid Amount:</strong> ₹
-              {selectedInstallment?.paidAmount?.toLocaleString()}
-            </div>
-          </div>
         </Modal.Body>
-        <Modal.Footer>
+
+        <Modal.Footer
+          style={{
+            padding: "12px 18px",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           <Button
-            variant="secondary"
+            variant="outline-secondary"
             onClick={() => setShowPaymentModal(false)}
+            style={{ fontSize: "13px", padding: "8px 16px" }}
           >
             Cancel
           </Button>
+
           <Button
             variant="primary"
             onClick={handlePaymentSubmit}
             disabled={isSubmitting || paymentData.status === "Pending"}
+            style={{ fontSize: "13px", padding: "8px 16px", fontWeight: 700 }}
           >
             {isSubmitting ? "Processing..." : "Submit Payment"}
           </Button>

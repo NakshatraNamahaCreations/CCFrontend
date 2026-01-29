@@ -26,7 +26,7 @@ import ViewEditingTaskModal from "./modals/ViewEditingTaskModal";
 import PhotoSelectionModal from "./modals/PhotoSelectionModal";
 import AssignAlbumEditingModal from "./modals/AssignAlbumEditingModal";
 
-import { FaImages, FaEdit, FaPrint, FaEye  } from "react-icons/fa";
+import { FaImages, FaEdit, FaPrint, FaEye } from "react-icons/fa";
 
 const SortedDataList = () => {
   const { quotationId } = useParams();
@@ -56,10 +56,12 @@ const SortedDataList = () => {
     finalVideoDuration: "",
   });
 
-  const [submitData, setSubmitData] = useState({
-    submittedDate: dayjs().format("YYYY-MM-DD"),
-    submittedNotes: "",
-  });
+ const [submitData, setSubmitData] = useState({
+  submittingCount: 0,
+  submittedDate: dayjs().format("YYYY-MM-DD"),
+  submittedNotes: "",
+});
+
 
   const [selectedSortedTask, setSelectedSortedTask] = useState(null);
   const [vendors, setVendors] = useState([]);
@@ -119,7 +121,7 @@ const SortedDataList = () => {
     if (!albumId) return;
     try {
       const { data } = await axios.get(
-        `${API_URL}/album-photoselection-task/album/${albumId}`
+        `${API_URL}/album-photoselection-task/album/${albumId}`,
       );
       if (data?.success) {
         setAlbumSelectionTasks((prev) => ({
@@ -139,7 +141,7 @@ const SortedDataList = () => {
   const fetchAllSelectedForQuotation = async () => {
     try {
       const { data } = await axios.get(
-        `${API_URL}/album-photo-selected/quotation/${quotationId}/latest-by-album`
+        `${API_URL}/album-photo-selected/quotation/${quotationId}/latest-by-album`,
       );
       if (data?.success) {
         setAlbumSelectedPhotos(data.data || {}); // already a map keyed by albumId
@@ -153,7 +155,7 @@ const SortedDataList = () => {
     if (!albumId) return;
     try {
       const { data } = await axios.get(
-        `${API_URL}/album-editing/album/${albumId}/latest`
+        `${API_URL}/album-editing/album/${albumId}/latest`,
       );
       if (data?.success) {
         setAlbumEditingLatest((prev) => ({
@@ -179,7 +181,7 @@ const SortedDataList = () => {
     if (!albumId) return;
     try {
       const { data } = await axios.get(
-        `${API_URL}/album-photo-selected/album/${albumId}`
+        `${API_URL}/album-photo-selected/album/${albumId}`,
       );
       if (data?.success && data?.data) {
         setAlbumSelectedPhotos((prev) => ({
@@ -203,7 +205,7 @@ const SortedDataList = () => {
       setLoading(true);
       setError("");
       const res = await axios.get(
-        `${API_URL}/sorting-task/completed/${quotationId}`
+        `${API_URL}/sorting-task/completed/${quotationId}`,
       );
       if (!res.data?.success) {
         setError(res.data?.message || "Failed to fetch summary");
@@ -289,8 +291,8 @@ const SortedDataList = () => {
     try {
       const res = await axios.get(
         `${API_URL}/vendors/specialization/${encodeURIComponent(
-          specializationName
-        )}`
+          specializationName,
+        )}`,
       );
 
       if (res.data?.success && Array.isArray(res.data.data)) {
@@ -311,7 +313,7 @@ const SortedDataList = () => {
     try {
       const { data } = await axios.put(
         `${API_URL}/quotations/${quotationId}/albums/${albumId}/status`,
-        { status }
+        { status },
       );
 
       if (data?.success) {
@@ -351,7 +353,7 @@ const SortedDataList = () => {
 
     setAlbumStatuses((p) => ({ ...p, [album._id]: result.newStatus }));
     toast.success(
-      result.message || `Album status updated to ${result.newStatus}`
+      result.message || `Album status updated to ${result.newStatus}`,
     );
 
     // NEW: if switched to selection-by-us, check whether a task already exists
@@ -364,6 +366,8 @@ const SortedDataList = () => {
   const handlePhotoSelectionComplete = () => {
     fetchSummary();
   };
+
+
   // somewhere near other handlers
   const handleAlbumEditing = (album) => {
     setAlbumForAssign(album);
@@ -383,7 +387,7 @@ const SortedDataList = () => {
 
       const { data } = await axios.post(
         `${API_URL}/album-editing/assign`,
-        payload
+        payload,
       );
 
       if (data?.success) {
@@ -409,7 +413,7 @@ const SortedDataList = () => {
     } catch (err) {
       console.error("Error assigning album editing task:", err);
       toast.error(
-        err?.response?.data?.message || "Failed to assign album editing task"
+        err?.response?.data?.message || "Failed to assign album editing task",
       );
     }
   };
@@ -462,7 +466,8 @@ const SortedDataList = () => {
     const tasks = isPhotoTask ? photoEditingTasks : videoEditingTasks;
 
     const editingTask = tasks.find(
-      (task) => task.packageName === pkgName && task.serviceName === serviceName
+      (task) =>
+        task.packageName === pkgName && task.serviceName === serviceName,
     );
 
     if (!editingTask) return { status: "Not Assigned", task: null };
@@ -553,7 +558,7 @@ const SortedDataList = () => {
         };
         response = await axios.post(
           `${API_URL}/photo-editing/assign`,
-          photoPayload
+          photoPayload,
         );
       } else {
         const videoPayload = {
@@ -566,7 +571,7 @@ const SortedDataList = () => {
         };
         response = await axios.post(
           `${API_URL}/video-editing/assign`,
-          videoPayload
+          videoPayload,
         );
       }
 
@@ -579,7 +584,7 @@ const SortedDataList = () => {
     } catch (err) {
       console.error("Error assigning editing task:", err);
       toast.error(
-        err?.response?.data?.message || "Failed to assign editing task"
+        err?.response?.data?.message || "Failed to assign editing task",
       );
     }
   };
@@ -588,6 +593,7 @@ const SortedDataList = () => {
   const handleOpenSubmitModal = (task) => {
     setSelectedSortedTask(task);
     setSubmitData({
+      submittingCount: task.editingTask?.submittedPhotosToEdit || 0,
       submittedDate: dayjs().format("YYYY-MM-DD"),
       submittedNotes: task.editingTask?.submittedNotes || "",
     });
@@ -609,7 +615,7 @@ const SortedDataList = () => {
         ? `${API_URL}/photo-editing/${taskId}/submit`
         : `${API_URL}/video-editing/${taskId}/submit`;
 
-      const res = await axios.post(endpoint, submitData);
+      const res = await axios.post(endpoint, {...submitData, submittedPhotosToEdit:submitData.submittingCount });
 
       if (res.data.success) {
         toast.success("Editing task submitted successfully!");
@@ -694,74 +700,76 @@ const SortedDataList = () => {
 
   // ----------------------- Grouped Photo & Video Data -----------------------
   const groupedPhotoData = useMemo(() => {
-    if (!summary?.collectedData?.serviceUnits) return [];
+    if (!summary?.data?.length) return [];
+
     const grouped = {};
 
-    summary.collectedData.serviceUnits
-      .filter((u) => u.noOfPhotos > 0 && u.sortingStatus === "Completed")
-      .forEach((u) => {
-        const key = `${u.packageName}_${u.serviceName}`;
+    summary.data
+      .filter((t) => t.status === "Completed" && (t.submittedPhotos || 0) > 0)
+      .forEach((t) => {
+        const key = `${t.packageName}_${t.serviceName}`;
         if (!grouped[key]) {
           grouped[key] = {
-            event: u.packageName,
-            service: u.serviceName,
+            event: t.packageName,
+            service: t.serviceName,
             qty: 1,
-            sortedPhotos: u.noOfPhotos,
+            submittedPhotos: t.submittedPhotos || 0, // ✅ USE THIS
           };
         } else {
           grouped[key].qty += 1;
-          grouped[key].sortedPhotos += u.noOfPhotos;
+          grouped[key].submittedPhotos += t.submittedPhotos || 0; // ✅ SUM
         }
       });
 
-    // Attach task details
+    // Attach editing task info (same as before)
     Object.values(grouped).forEach((g) => {
-      const t = photoEditingTasks.find(
-        (x) => x.packageName === g.event && x.serviceName === g.service
+      const task = photoEditingTasks.find(
+        (x) => x.packageName === g.event && x.serviceName === g.service,
       );
-      g.editingStatus = t ? t.status : "Not Assigned";
-      g.editingTask = t || null; // ✅ add task object
+      g.editingStatus = task ? task.status : "Not Assigned";
+      g.editingTask = task || null;
       g.taskType = "photo";
     });
 
     return Object.values(grouped).sort((a, b) =>
-      a.event.localeCompare(b.event)
+      a.event.localeCompare(b.event),
     );
   }, [summary, photoEditingTasks]);
 
   const groupedVideoData = useMemo(() => {
-    if (!summary?.collectedData?.serviceUnits) return [];
+    if (!summary?.data?.length) return [];
+
     const grouped = {};
 
-    summary.collectedData.serviceUnits
-      .filter((u) => u.noOfVideos > 0 && u.sortingStatus === "Completed")
-      .forEach((u) => {
-        const key = `${u.packageName}_${u.serviceName}`;
+    summary.data
+      .filter((t) => t.status === "Completed" && (t.submittedVideos || 0) > 0)
+      .forEach((t) => {
+        const key = `${t.packageName}_${t.serviceName}`;
         if (!grouped[key]) {
           grouped[key] = {
-            event: u.packageName,
-            service: u.serviceName,
+            event: t.packageName,
+            service: t.serviceName,
             qty: 1,
-            sortedVideos: u.noOfVideos,
+            submittedVideos: t.submittedVideos || 0, // ✅ USE THIS
           };
         } else {
           grouped[key].qty += 1;
-          grouped[key].sortedVideos += u.noOfVideos;
+          grouped[key].submittedVideos += t.submittedVideos || 0; // ✅ SUM
         }
       });
 
-    // Attach task details
+    // Attach editing task info
     Object.values(grouped).forEach((g) => {
-      const t = videoEditingTasks.find(
-        (x) => x.packageName === g.event && x.serviceName === g.service
+      const task = videoEditingTasks.find(
+        (x) => x.packageName === g.event && x.serviceName === g.service,
       );
-      g.editingStatus = t ? t.status : "Not Assigned";
-      g.editingTask = t || null; // ✅ add task object
+      g.editingStatus = task ? task.status : "Not Assigned";
+      g.editingTask = task || null;
       g.taskType = "video";
     });
 
     return Object.values(grouped).sort((a, b) =>
-      a.event.localeCompare(b.event)
+      a.event.localeCompare(b.event),
     );
   }, [summary, videoEditingTasks]);
 
@@ -782,7 +790,7 @@ const SortedDataList = () => {
       const basePhotos = albumForSubmit?.snapshot?.basePhotos || 0;
       if (basePhotos && n > basePhotos) {
         toast.error(
-          `Selected photos cannot exceed album capacity (${basePhotos}).`
+          `Selected photos cannot exceed album capacity (${basePhotos}).`,
         );
         return;
       }
@@ -800,7 +808,7 @@ const SortedDataList = () => {
 
       const { data } = await axios.post(
         `${API_URL}/album-photo-selected/create`,
-        payload
+        payload,
       );
 
       if (data?.success) {
@@ -834,7 +842,7 @@ const SortedDataList = () => {
     } catch (err) {
       console.error("Error submitting selected photos:", err);
       toast.error(
-        err?.response?.data?.message || "Failed to submit selected photos."
+        err?.response?.data?.message || "Failed to submit selected photos.",
       );
     }
   };
@@ -868,7 +876,7 @@ const SortedDataList = () => {
           <Row>
             <Col md={3}>
               <div className="mb-2">
-                <span className="text-muted fw-bold">Quotation ID:</span>
+                <span className="fw-bold">Quotation ID:</span>
                 <div className="text-dark">
                   {summary?.quotation?.quotationId || "—"}
                 </div>
@@ -876,7 +884,7 @@ const SortedDataList = () => {
             </Col>
             <Col md={3}>
               <div className="mb-2">
-                <span className="text-muted fw-bold">Couple/Person:</span>
+                <span className=" fw-bold">Couple/Person:</span>
                 <div className="text-dark">
                   {summary?.collectedData?.personName || "—"}
                 </div>
@@ -884,7 +892,7 @@ const SortedDataList = () => {
             </Col>
             <Col md={3}>
               <div className="mb-2">
-                <span className="text-muted fw-bold">Total Sorted Photos:</span>
+                <span className=" fw-bold">Total Sorted Photos:</span>
                 <div className="text-danger fw-bold">
                   {summary?.totalSortedPhotos || 0}
                 </div>
@@ -892,7 +900,7 @@ const SortedDataList = () => {
             </Col>
             <Col md={3}>
               <div className="mb-2">
-                <span className="text-muted fw-bold">Total Sorted Videos:</span>
+                <span className=" fw-bold">Total Sorted Videos:</span>
                 <div className="text-danger fw-bold">
                   {summary?.totalSortedVideos || 0}
                 </div>
@@ -902,10 +910,31 @@ const SortedDataList = () => {
 
           {!!summary?.quotation?.quoteNote && (
             <Row>
-              <Col md={12}>
-                <span className="text-muted fw-bold">Quote Note:</span>
+              <Col md={6}>
+                <span className=" fw-bold">Quote Note:</span>
                 <div className="fst-italic text-dark">
                   {summary.quotation.quoteNote}
+                </div>
+              </Col>
+
+              <Col md={3}>
+                <div className="mb-2">
+                  <span className=" fw-bold">
+                    Total Collected Photos:
+                  </span>
+                  <div className="text-success fw-bold">
+                    {summary?.totalCollectedPhotos || 0}
+                  </div>
+                </div>
+              </Col>
+              <Col md={3}>
+                <div className="mb-2">
+                  <span className="fw-bold">
+                    Total Collected Videos:
+                  </span>
+                  <div className="text-success fw-bold">
+                    {summary?.totalCollectedVideos || 0}
+                  </div>
                 </div>
               </Col>
             </Row>
@@ -972,7 +1001,7 @@ const SortedDataList = () => {
                           options={options}
                           placeholder="Update Status"
                           value={options.find(
-                            (opt) => opt.value === albumStatuses[a._id]
+                            (opt) => opt.value === albumStatuses[a._id],
                           )}
                           onChange={(selected) => {
                             handleAlbumStatusChange(a, selected.value);
@@ -1015,15 +1044,15 @@ const SortedDataList = () => {
                             }),
                             option: (
                               base,
-                              { data, isFocused, isSelected }
+                              { data, isFocused, isSelected },
                             ) => ({
                               ...base,
                               color: data.color,
                               backgroundColor: isSelected
                                 ? "#f5f5f5"
                                 : isFocused
-                                ? "#fafafa"
-                                : "white",
+                                  ? "#fafafa"
+                                  : "white",
                               fontSize: "11.5px",
                               whiteSpace: "normal",
                             }),
@@ -1053,7 +1082,7 @@ const SortedDataList = () => {
                                 onClick={() => {
                                   setAlbumTaskToView(
                                     albumSelectionTasks[a._id].latestTask ||
-                                      null
+                                      null,
                                   );
                                   setShowAlbumTaskView(true);
                                 }}
@@ -1139,7 +1168,7 @@ const SortedDataList = () => {
                               className="rounded-circle"
                               onClick={() => {
                                 setAlbumEditingToView(
-                                  albumEditingLatest[a._id]
+                                  albumEditingLatest[a._id],
                                 );
                                 setShowAlbumEditingView(true);
                               }}
@@ -1242,7 +1271,7 @@ const SortedDataList = () => {
                     <td>{item.service}</td>
                     <td className="text-center">{item.qty}</td>
                     <td className="text-center fw-bold text-success">
-                      {item.sortedPhotos}
+                      {item.submittedPhotos}
                     </td>
                     <td
                       className={`${
@@ -1299,7 +1328,7 @@ const SortedDataList = () => {
                     <td>{item.service}</td>
                     <td className="text-center">{item.qty}</td>
                     <td className="text-center fw-bold text-info">
-                      {item.sortedVideos}
+                      {item.submittedVideos}
                     </td>
                     <td
                       className={`${
